@@ -28,7 +28,7 @@ export const BillingAndReminders: React.FC<Props> = ({
   onSendStudentReminderWhatsApp,
 }) => {
   const [broadcastMessage, setBroadcastMessage] = useState(
-    'Estimados padres de familia y jugadores de Geckop´s Voleibol: Les recordamos que la fecha límite para el pago de la mensualidad del mes es el día 5. Favor de subir su comprobante en su portal web para su oportuna validación.'
+    'Estimados padres de familia y jugadores de Geckos Voleibol: Les recordamos que la fecha límite para el pago de la mensualidad del mes es el día 5. Favor de subir su comprobante en su portal web para su oportuna validación.'
   );
   const [broadcastTitle, setBroadcastTitle] = useState('Recordatorio Oficial de Mensualidad');
   const [showCycleModal, setShowCycleModal] = useState(false);
@@ -150,9 +150,9 @@ export const BillingAndReminders: React.FC<Props> = ({
                     onClick={() => {
                       setBroadcastTitle(tpl);
                       if (tpl.includes('Inicio')) {
-                        setBroadcastMessage('Geckop´s Voleibol informa: Se ha generado la cuota mensual para este nuevo ciclo. Favor de efectuar su pago y subir su comprobante antes del día 5.');
+                        setBroadcastMessage('Geckos Voleibol informa: Se ha generado la cuota mensual para este nuevo ciclo. Favor de efectuar su pago y subir su comprobante antes del día 5.');
                       } else if (tpl.includes('Último')) {
-                        setBroadcastMessage('Atención atletas y papás: Hoy es el último día para reportar su comprobante de pago de mensualidad sin recargos en Geckop´s Voleibol.');
+                        setBroadcastMessage('Atención atletas y papás: Hoy es el último día para reportar su comprobante de pago de mensualidad sin recargos en Geckos Voleibol.');
                       } else {
                         setBroadcastMessage('Estimados tutores: Solicitamos regularizar de inmediato los adeudos pendientes para no afectar la participación del atleta en los entrenamientos.');
                       }
@@ -345,7 +345,7 @@ export const BillingAndReminders: React.FC<Props> = ({
               </div>
 
               <div className="p-3 rounded-xl bg-neutral-50 text-[11px] text-neutral-600">
-                Al confirmar, se programará la orden de cobro para los {students.length} alumnos registrados en Geckop´s Voleibol.
+                Al confirmar, se programará la orden de cobro para los {students.length} alumnos registrados en Geckos Voleibol.
               </div>
 
               <div className="pt-2 flex gap-2">

@@ -148,24 +148,40 @@ export const mapPaymentToRow = (payment: PaymentRecord): any => {
 // API Services
 export const supabaseService = {
   // Check Connection
-  async testConnection(): Promise<{ connected: boolean; message: string }> {
+  async testConnection(): Promise<{ connected: boolean; message: string; missingTables?: string[] }> {
     try {
       const client = getSupabaseClient();
-      const { error } = await client.from('students').select('id').limit(1);
-      if (error) {
-        // Might be that table hasn't been created yet with the SQL
-        if (error.code === '42P01' || error.message.includes('relation "students" does not exist')) {
-          return {
-            connected: true,
-            message: 'Conexión a Supabase exitosa. Falta ejecutar el script SQL para crear las tablas.',
-          };
+      const tablesToCheck = ['system_users', 'students', 'payments', 'sedes'];
+      const missingTables: string[] = [];
+
+      for (const t of tablesToCheck) {
+        const { error } = await client.from(t).select('id').limit(1);
+        if (error) {
+          if (
+            error.code === '42P01' ||
+            error.code === 'PGRST205' ||
+            error.message.includes('relation') ||
+            error.message.includes('schema cache')
+          ) {
+            missingTables.push(t);
+          } else {
+            return {
+              connected: false,
+              message: `Error en tabla '${t}': ${error.message}`,
+            };
+          }
         }
+      }
+
+      if (missingTables.length > 0) {
         return {
-          connected: false,
-          message: `Error al conectar con Supabase: ${error.message}`,
+          connected: true,
+          message: `Conexión a Supabase establecida, pero faltan crear las siguientes tablas: [${missingTables.join(', ')}]. Abre el modal de Gestión de Datos, copia el script SQL y ejecútalo en el SQL Editor de Supabase.`,
+          missingTables,
         };
       }
-      return { connected: true, message: 'Conectado exitosamente a Supabase.' };
+
+      return { connected: true, message: '¡Conexión exitosa! Todas las tablas en Supabase están creadas y operativas.' };
     } catch (err: any) {
       return { connected: false, message: err?.message || 'Error de red con Supabase.' };
     }

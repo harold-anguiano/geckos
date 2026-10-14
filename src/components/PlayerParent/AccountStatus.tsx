@@ -92,7 +92,7 @@ export const AccountStatus: React.FC<Props> = ({
                   <span>·</span>
                   <span>Rama {currentStudent.branch}</span>
                   <span>·</span>
-                  <span>Geckop´s Voleibol</span>
+                  <span>Geckos Voleibol</span>
                 </div>
               </div>
             </div>
@@ -185,7 +185,7 @@ export const AccountStatus: React.FC<Props> = ({
               <span className="text-xs font-sans text-neutral-500 font-normal">MXN</span>
             </div>
             <p className="text-xs text-neutral-500 mt-1">
-              Ciclo Mensual · Geckop´s Voleibol
+              Ciclo Mensual · Geckos Voleibol
             </p>
           </div>
 

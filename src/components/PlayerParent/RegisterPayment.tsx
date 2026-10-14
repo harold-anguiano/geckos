@@ -65,12 +65,12 @@ const EXTRA_CATEGORIES: {
     label: 'Uniforme / Equipo',
     icon: Shirt,
     description: 'Jersey oficial, short, rodilleras o kit de entrenamiento.',
-    defaultConcept: 'Uniforme Oficial Geckop´s Voleibol',
+    defaultConcept: 'Uniforme Oficial Geckos Voleibol',
     suggestedAmounts: [650, 850, 1100],
     suggestions: [
       'Kit Completo Juego Oficial (Playera + Short)',
       'Playera de Entrenamiento Oficial',
-      'Sudadera / Chamarra Oficial Geckop´s',
+      'Sudadera / Chamarra Oficial Geckos',
       'Rodilleras y Calcetas de Club',
     ],
   },
@@ -105,7 +105,7 @@ const EXTRA_CATEGORIES: {
     label: 'Otro Concepto Extra',
     icon: Tag,
     description: 'Cualquier otro gasto extraordinario acordado con el coach.',
-    defaultConcept: 'Pago Extraordinario Club Geckop´s',
+    defaultConcept: 'Pago Extraordinario Club Geckos',
     suggestions: [
       'Clínica / Taller Especial de Voleibol',
       'Convivio de Fin de Temporada',

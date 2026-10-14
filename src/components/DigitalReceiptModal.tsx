@@ -50,7 +50,7 @@ export const DigitalReceiptModal: React.FC<Props> = ({
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b-2 border-neutral-900">
             <img
               src="https://appdesignproyectos.com/geckoslogo.png"
-              alt="Geckop´s Voleibol"
+              alt="Geckos Voleibol"
               className="h-14 sm:h-16 w-auto object-contain"
             />
             <div className="text-center sm:text-right">
@@ -148,7 +148,7 @@ export const DigitalReceiptModal: React.FC<Props> = ({
             </div>
 
             <div className="text-right">
-              <span className="text-[10px] text-neutral-400 block">Geckop´s Voleibol</span>
+              <span className="text-[10px] text-neutral-400 block">Geckos Voleibol</span>
               <span className="text-[10px] text-neutral-400">Comprobante Fiscal Interno</span>
             </div>
           </div>

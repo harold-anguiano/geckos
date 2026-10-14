@@ -20,11 +20,12 @@ import {
 } from './utils/storage';
 import { supabaseService } from './utils/supabaseClient';
 
-import { RoleSelector } from './components/RoleSelector';
+import { HomeAuth } from './components/HomeAuth';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { BottomBar } from './components/BottomBar';
 import { HeadCoachDashboard } from './components/HeadCoach/Dashboard';
+import { CoachesManagement } from './components/HeadCoach/CoachesManagement';
 import { RegisteredStudentsModule } from './components/HeadCoach/RegisteredStudentsModule';
 import { PlayersManagement } from './components/HeadCoach/PlayersManagement';
 import { PaymentsValidation } from './components/HeadCoach/PaymentsValidation';
@@ -37,10 +38,29 @@ import { OfficialSocials } from './components/OfficialSocials';
 import { DigitalReceiptModal } from './components/DigitalReceiptModal';
 import { DataManagementModal } from './components/DataManagementModal';
 import { DocumentationPDFModal } from './components/DocumentationPDFModal';
+import { SystemUser } from './types';
+import {
+  getCurrentSessionUser,
+  setCurrentSessionUser,
+  getStoredUsers,
+  syncUsersFromSupabase,
+} from './utils/auth';
 
 export default function App() {
-  // Active Role: starts null to show the clean role selection screen
-  const [activeRole, setActiveRole] = useState<UserRole | null>(null);
+  // Authenticated user session
+  const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => getCurrentSessionUser());
+
+  // Active Role view
+  const [activeRole, setActiveRole] = useState<UserRole | null>(() => {
+    const session = getCurrentSessionUser();
+    if (!session) return null;
+    return session.role === 'player' ? 'player' : session.role;
+  });
+
+  // Stored coaches for admin management
+  const [coaches, setCoaches] = useState<SystemUser[]>(() =>
+    getStoredUsers().filter((u) => u.role === 'coach_assistant')
+  );
 
   // Active module tab
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
@@ -88,11 +108,16 @@ export default function App() {
     // Background sync with Supabase database
     const syncFromSupabase = async () => {
       try {
-        const [studentsRes, paymentsRes, sedesRes] = await Promise.all([
+        const [studentsRes, paymentsRes, sedesRes, syncedUsers] = await Promise.all([
           supabaseService.fetchStudents(),
           supabaseService.fetchPayments(),
           supabaseService.fetchSedes(),
+          syncUsersFromSupabase(),
         ]);
+
+        if (syncedUsers && syncedUsers.length > 0) {
+          setCoaches(syncedUsers.filter((u) => u.role === 'coach_assistant'));
+        }
 
         if (studentsRes.students && studentsRes.students.length > 0) {
           setStudents(studentsRes.students);
@@ -170,21 +195,54 @@ export default function App() {
     saveNotifications(updated);
   };
 
-  // Role Selection Handler
-  const handleSelectRole = (role: UserRole) => {
-    setActiveRole(role);
-    if (role === 'head_coach' || role === 'coach_assistant') {
+  // User Login Handler
+  const handleLoginSuccess = (user: SystemUser, student?: Student) => {
+    setCurrentUser(user);
+    setCurrentSessionUser(user);
+
+    const targetRole: UserRole = user.role === 'player' ? 'player' : user.role;
+    setActiveRole(targetRole);
+
+    if (student) {
+      setCurrentStudent(student);
+    } else if (user.assignedStudentId) {
+      const found = students.find((s) => s.id === user.assignedStudentId);
+      if (found) setCurrentStudent(found);
+    } else if (targetRole === 'player') {
+      if (students.length > 0) setCurrentStudent(students[0]);
+    }
+
+    if (targetRole === 'head_coach' || targetRole === 'coach_assistant') {
       setCurrentTab('dashboard');
     } else {
       setCurrentTab('account');
-      if (!currentStudent && students.length > 0) {
-        setCurrentStudent(students[0]);
+    }
+  };
+
+  // Switch role view for admin exploration
+  const handleSwitchRoleView = (role: UserRole) => {
+    if (currentUser?.role === 'head_coach') {
+      setActiveRole(role);
+      if (role === 'head_coach' || role === 'coach_assistant') {
+        setCurrentTab('dashboard');
+      } else {
+        setCurrentTab('account');
+        if (!currentStudent && students.length > 0) {
+          setCurrentStudent(students[0]);
+        }
       }
     }
   };
 
   const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentSessionUser(null);
     setActiveRole(null);
+  };
+
+  const handleCoachesUpdated = () => {
+    const updated = getStoredUsers().filter((u) => u.role === 'coach_assistant');
+    setCoaches(updated);
   };
 
   // Stage 1: Player Registration & Management
@@ -292,7 +350,7 @@ export default function App() {
   const handleSendStudentReminderWhatsApp = (student: Student) => {
     const phoneClean = student.tutorPhone.replace(/\D/g, '');
     const textMsg = encodeURIComponent(
-      `Hola estimado(a) ${student.tutorName}, le saludamos de Geckop´s Voleibol. Le recordamos que ${student.fullName} presenta un saldo pendiente de $${student.currentBalance} MXN correspondiente a su mensualidad. Puede reportar su comprobante de pago en el portal del club. ¡Muchas gracias!`
+      `Hola estimado(a) ${student.tutorName}, le saludamos de Geckos Voleibol. Le recordamos que ${student.fullName} presenta un saldo pendiente de $${student.currentBalance} MXN correspondiente a su mensualidad. Puede reportar su comprobante de pago en el portal del club. ¡Muchas gracias!`
     );
     window.open(`https://wa.me/${phoneClean}?text=${textMsg}`, '_blank');
   };
@@ -506,12 +564,13 @@ export default function App() {
     setViewingReceipt(payment);
   };
 
-  // If no active role is chosen: show the clean role selection screen
+  // If no active role is chosen: show the clean Home with ONLY logo + login & registration form
   if (!activeRole) {
     return (
       <main>
-        <RoleSelector
-          onSelectRole={handleSelectRole}
+        <HomeAuth
+          students={students}
+          onLoginSuccess={handleLoginSuccess}
           onOpenDataReset={() => setIsDataModalOpen(true)}
           onOpenDocPDF={() => setIsDocModalOpen(true)}
           sedes={sedes}
@@ -545,20 +604,49 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#363435] flex flex-col font-sans w-full max-w-full overflow-x-hidden">
+      {/* Banner de Navegación de Rol para el Administrador */}
+      {currentUser?.role === 'head_coach' && activeRole !== 'head_coach' && (
+        <div className="bg-[#363435] text-white px-3 sm:px-6 py-2 text-xs flex items-center justify-between border-b border-neutral-700 shadow-md sticky top-0 z-50">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+            <span className="truncate">
+              Modo Exploración: Estás navegando como{' '}
+              <strong className="text-amber-300">
+                {activeRole === 'coach_assistant'
+                  ? 'Entrenador Asistente'
+                  : activeRole === 'parent'
+                  ? 'Padre de Familia'
+                  : 'Alumno / Jugador'}
+              </strong>{' '}
+              ({currentUser.name})
+            </span>
+          </div>
+          <button
+            onClick={() => handleSwitchRoleView('head_coach')}
+            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-neutral-900 rounded-lg font-bold text-xs transition cursor-pointer shrink-0 ml-2 shadow-xs"
+          >
+            Volver a Administrador
+          </button>
+        </div>
+      )}
+
       {/* 1. Cabecera Institucional Unificada */}
       <Header
+        currentUser={currentUser}
         activeRole={activeRole}
         currentStudent={currentStudent}
         onLogout={handleLogout}
         onOpenDataReset={() => setIsDataModalOpen(true)}
         onOpenDocPDF={() => setIsDocModalOpen(true)}
         pendingCount={pendingValidationsCount}
+        onSwitchRoleView={handleSwitchRoleView}
       />
 
       {/* Main Workspace: Sidebar on Desktop + Content Area */}
       <div className="flex-1 flex max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
         {/* 2. Menú Lateral Desplegable en Escritorio */}
         <Sidebar
+          currentUser={currentUser}
           activeRole={activeRole}
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
@@ -570,13 +658,14 @@ export default function App() {
           onOpenDocPDF={() => setIsDocModalOpen(true)}
         />
 
-        {/* 3. Área de Trabajo Principal (Sin pestañas repetitivas) */}
+        {/* 3. Área de Trabajo Principal */}
         <main className="flex-1 p-3 sm:p-5 lg:p-8 pb-22 lg:pb-8 w-full max-w-full min-w-0 overflow-x-hidden">
           {/* Coach Routes */}
           {isCoach && (
             <>
               {currentTab === 'dashboard' && (
                 <HeadCoachDashboard
+                  currentUser={currentUser}
                   students={students}
                   payments={payments}
                   cycles={cycles}
@@ -584,7 +673,17 @@ export default function App() {
                   onNavigateToBilling={() => setCurrentTab('billing')}
                   onNavigateToPlayers={() => setCurrentTab('players')}
                   onNavigateToRegisteredStudents={() => setCurrentTab('registered_students')}
+                  onNavigateToCoaches={() => setCurrentTab('coaches')}
+                  onSwitchRoleView={handleSwitchRoleView}
                   onSendReminderWhatsApp={handleSendStudentReminderWhatsApp}
+                />
+              )}
+
+              {currentTab === 'coaches' && (
+                <CoachesManagement
+                  coaches={coaches}
+                  onCoachesUpdated={handleCoachesUpdated}
+                  sedes={sedes}
                 />
               )}
 

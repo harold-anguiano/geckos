@@ -1,5 +1,5 @@
 import React from 'react';
-import { Student, PaymentRecord, BillingCycle } from '../../types';
+import { Student, PaymentRecord, BillingCycle, SystemUser, UserRole } from '../../types';
 import {
   DollarSign,
   AlertTriangle,
@@ -14,9 +14,12 @@ import {
   ClipboardList,
   Sparkles,
   CreditCard,
+  UserCheck,
+  Eye,
 } from 'lucide-react';
 
 interface Props {
+  currentUser?: SystemUser | null;
   students: Student[];
   payments: PaymentRecord[];
   cycles: BillingCycle[];
@@ -24,10 +27,13 @@ interface Props {
   onNavigateToBilling: () => void;
   onNavigateToPlayers: () => void;
   onNavigateToRegisteredStudents?: () => void;
+  onNavigateToCoaches?: () => void;
+  onSwitchRoleView?: (role: UserRole) => void;
   onSendReminderWhatsApp: (student: Student) => void;
 }
 
 export const HeadCoachDashboard: React.FC<Props> = ({
+  currentUser,
   students,
   payments,
   cycles,
@@ -35,6 +41,8 @@ export const HeadCoachDashboard: React.FC<Props> = ({
   onNavigateToBilling,
   onNavigateToPlayers,
   onNavigateToRegisteredStudents,
+  onNavigateToCoaches,
+  onSwitchRoleView,
   onSendReminderWhatsApp,
 }) => {
   // Current month metrics
@@ -89,15 +97,31 @@ export const HeadCoachDashboard: React.FC<Props> = ({
       {/* Top Welcome & Quick Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-neutral-200 min-w-0">
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-2xl font-extrabold text-neutral-900 tracking-tight truncate">
-            Panel de Control · Head Coach
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#363435] text-white">
+              {currentUser?.role === 'head_coach' ? 'Administrador' : 'Entrenador Staff'}
+            </span>
+            <span className="text-xs text-neutral-400">· Geckos Voleibol</span>
+          </div>
+          <h1 className="text-lg sm:text-2xl font-extrabold text-neutral-900 tracking-tight truncate mt-1">
+            Bienvenido, {currentUser?.name || 'Harold Anguiano Morales'}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
-            Estado de ingresos generales, cuotas mensuales y pagos extras de eventos.
+            Estado de ingresos generales, cuotas mensuales y control deportivo de la academia.
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onNavigateToCoaches && (
+            <button
+              onClick={onNavigateToCoaches}
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white border border-neutral-200 hover:border-[#363435] text-neutral-800 text-xs font-bold rounded-xl shadow-2xs transition active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-[#363435]" />
+              <span>Entrenadores</span>
+            </button>
+          )}
+
           {onNavigateToRegisteredStudents && (
             <button
               onClick={onNavigateToRegisteredStudents}

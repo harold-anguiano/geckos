@@ -252,7 +252,7 @@ export const RegisteredStudentsModule: React.FC<Props> = ({
       <div className="hidden print:block pb-4 mb-4 border-b-2 border-neutral-900">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-black text-neutral-900">Geckop´s Voleibol Club</h2>
+            <h2 className="text-xl font-black text-neutral-900">Geckos Voleibol Club</h2>
             <p className="text-xs text-neutral-600">Padrón Oficial de Alumnos Registrados · Temporada 2026</p>
           </div>
           <div className="text-right">

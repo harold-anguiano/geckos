@@ -141,7 +141,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
     };
 
     onRegisterStudents([newStudent]);
-    setSuccessMessage(`¡Registro exitoso! Alumno ${adultForm.fullName} registrado en Geckop´s Voleibol.`);
+    setSuccessMessage(`¡Registro exitoso! Alumno ${adultForm.fullName} registrado en Geckos Voleibol.`);
     setAdultForm({
       fullName: '',
       birthDate: '',

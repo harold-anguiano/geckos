@@ -23,7 +23,7 @@ export const OfficialSocials: React.FC = () => {
     },
     {
       name: 'Facebook Fanpage',
-      handle: 'Geckop´s Voleibol Club',
+      handle: 'Geckos Voleibol Club',
       url: 'https://www.facebook.com',
       color: 'bg-blue-600 text-white',
       desc: 'Convocatorias, roles de juego, ligas y transmisiones en vivo.',
@@ -55,7 +55,7 @@ export const OfficialSocials: React.FC = () => {
           Enlaces Institucionales & Redes Oficiales
         </h1>
         <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
-          Conéctate a las plataformas oficiales y canales de comunicación de Geckop´s Voleibol.
+          Conéctate a las plataformas oficiales y canales de comunicación de Geckos Voleibol.
         </p>
       </div>
 

@@ -1,5 +1,19 @@
 export type UserRole = 'head_coach' | 'coach_assistant' | 'parent' | 'player';
 
+export interface SystemUser {
+  id: string;
+  name: string;
+  username: string;
+  password?: string;
+  email?: string;
+  phone?: string;
+  role: 'head_coach' | 'coach_assistant' | 'player';
+  campus?: string;
+  assignedStudentId?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
 export type StudentCategory =
   | 'Sub 23'
   | 'Juvenil'

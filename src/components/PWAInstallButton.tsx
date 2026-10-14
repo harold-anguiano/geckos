@@ -33,7 +33,7 @@ export const PWAInstallButton: React.FC<Props> = ({ variant = 'header' }) => {
     <>
       <button
         onClick={handleInstallClick}
-        title="Instalar Geckop´s Voleibol en tu dispositivo"
+        title="Instalar Geckos Voleibol en tu dispositivo"
         className={`flex items-center gap-1.5 rounded-lg font-medium transition-all shadow-xs active:scale-95 shrink-0 ${
           variant === 'header'
             ? 'bg-[#363435] text-white hover:bg-[#000000] px-2.5 py-1.5 sm:px-3 text-xs'
@@ -52,10 +52,10 @@ export const PWAInstallButton: React.FC<Props> = ({ variant = 'header' }) => {
               <div className="flex items-center gap-2">
                 <img
                   src="https://appdesignproyectos.com/geckosicono.png"
-                  alt="Geckop´s Voleibol"
+                  alt="Geckos Voleibol"
                   className="w-7 h-7 object-contain"
                 />
-                <h3 className="text-base font-bold text-neutral-900">Instalar Geckop´s Voleibol</h3>
+                <h3 className="text-base font-bold text-neutral-900">Instalar Geckos Voleibol</h3>
               </div>
               <button
                 onClick={() => setShowModal(false)}

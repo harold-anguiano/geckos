@@ -1,5 +1,4 @@
-import React from 'react';
-import { UserRole } from '../types';
+import { SystemUser, UserRole } from '../types';
 import {
   LayoutDashboard,
   Users,
@@ -14,9 +13,11 @@ import {
   ChevronRight,
   Sparkles,
   FileText,
+  UserCheck,
 } from 'lucide-react';
 
 interface Props {
+  currentUser?: SystemUser | null;
   activeRole: UserRole;
   currentTab: string;
   onSelectTab: (tab: string) => void;
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export const Sidebar: React.FC<Props> = ({
+  currentUser,
   activeRole,
   currentTab,
   onSelectTab,
@@ -40,9 +42,11 @@ export const Sidebar: React.FC<Props> = ({
   onOpenDocPDF,
 }) => {
   const isCoach = activeRole === 'head_coach' || activeRole === 'coach_assistant';
+  const isAdmin = currentUser?.role === 'head_coach';
 
   const coachMenuItems = [
     { id: 'dashboard', label: 'Panel de Control', icon: LayoutDashboard },
+    ...(isAdmin ? [{ id: 'coaches', label: 'Entrenadores', icon: UserCheck }] : []),
     { id: 'registered_students', label: 'Alumnos Registrados', icon: Users },
     { id: 'players', label: 'Pagos', icon: CreditCard },
     {
@@ -78,6 +82,24 @@ export const Sidebar: React.FC<Props> = ({
     >
       {/* Navigation Links */}
       <div className="flex-1 py-6 px-3 space-y-1.5 overflow-y-auto">
+        {currentUser && !isCollapsed && (
+          <div className="mb-4 p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#363435] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                {currentUser.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-extrabold text-neutral-900 truncate leading-tight">
+                  {currentUser.name}
+                </p>
+                <p className="text-[10px] text-neutral-500 truncate leading-tight mt-0.5">
+                  @{currentUser.username} · {currentUser.role === 'head_coach' ? 'Admin' : 'Staff'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-neutral-400 uppercase">
           {!isCollapsed && (isCoach ? 'Módulos Deportivos' : 'Portal de Familia')}
         </div>
@@ -158,7 +180,7 @@ export const Sidebar: React.FC<Props> = ({
         {!isCollapsed && (
           <div className="px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200/60 text-[11px] text-neutral-500 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="truncate">Geckop´s Voleibol v2.0</span>
+            <span className="truncate">Geckos Voleibol v2.0</span>
           </div>
         )}
       </div>

@@ -51,7 +51,7 @@ export const DocumentationPDFModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <div>
               <img
                 src="https://appdesignproyectos.com/geckoslogo.png"
-                alt="Geckop´s Voleibol"
+                alt="Geckos Voleibol"
                 className="h-16 sm:h-20 w-auto object-contain"
               />
             </div>
@@ -60,7 +60,7 @@ export const DocumentationPDFModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 Ficha Técnica & Manual Operativo
               </span>
               <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-                Geckop´s Voleibol
+                Geckos Voleibol
               </h1>
               <p className="text-xs text-neutral-500 mt-0.5">
                 Plataforma Deportiva de Control, Cobranza y Validación de Pagos
@@ -247,8 +247,8 @@ export const DocumentationPDFModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {/* Pie del Documento */}
           <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-2">
-            <span>Documento generado por el Sistema Oficial de Geckop´s Voleibol.</span>
-            <span className="font-mono">© 2026 Geckop´s Voleibol · Todos los derechos reservados.</span>
+            <span>Documento generado por el Sistema Oficial de Geckos Voleibol.</span>
+            <span className="font-mono">© 2026 Geckos Voleibol · Todos los derechos reservados.</span>
           </div>
 
         </div>

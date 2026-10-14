@@ -17,9 +17,9 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         manifest: {
           id: '/',
-          name: 'Geckop´s Voleibol',
-          short_name: 'Geckops',
-          description: 'Sistema de gestión deportiva, control de cuotas y validación de pagos para Geckop´s Voleibol.',
+          name: 'Geckos Voleibol',
+          short_name: 'Geckos Voleibol',
+          description: 'Sistema de gestión deportiva, control de cuotas y validación de pagos para Geckos Voleibol.',
           theme_color: '#363435',
           background_color: '#ffffff',
           display: 'standalone',

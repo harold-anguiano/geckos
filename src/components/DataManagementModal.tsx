@@ -35,37 +35,70 @@ interface Props {
 }
 
 export const SUPABASE_SQL_SCRIPT = `-- ====================================================================
--- GECKOP'S VOLEIBOL - ESQUEMA COMPLETO DE BASE DE DATOS PARA SUPABASE
+-- GECKOS VOLEIBOL - ESQUEMA COMPLETO Y CORREGIDO PARA SUPABASE
 -- Proyecto: geckos@appdesignsoftware.com (avchpdtkogejgnomkxua)
--- Instrucciones: Pega y ejecuta este script en el SQL Editor de Supabase
+-- URL del Proyecto: https://avchpdtkogejgnomkxua.supabase.co
+-- Instrucciones: Pega y ejecuta este script en el "SQL Editor" de Supabase y presiona "RUN"
+-- Este script es 100% IDEMPOTENTE: se puede ejecutar múltiples veces sin errores.
 -- ====================================================================
 
--- 1. EXTENSIÓN PARA GENERACIÓN DE IDENTIFICADORES UUID
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 2. TABLA DE SEDES DE ENTRENAMIENTO
-CREATE TABLE IF NOT EXISTS public.sedes (
-    id TEXT PRIMARY KEY DEFAULT ('sede_' || uuid_generate_v4()::text),
-    name TEXT NOT NULL UNIQUE,
+-- 1. TABLA DE USUARIOS DEL SISTEMA (ADMINISTRADORES, ENTRENADORES Y ALUMNOS)
+CREATE TABLE IF NOT EXISTS public.system_users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    role TEXT NOT NULL DEFAULT 'coach_assistant', -- 'head_coach', 'coach_assistant', 'player'
+    campus TEXT DEFAULT 'Tlalnepantla',
+    assigned_student_id TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Habilitar RLS en sedes
-ALTER TABLE public.sedes ENABLE ROW LEVEL SECURITY;
+-- Asegurar restricción única en username de forma segura
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'system_users_username_key'
+    ) THEN
+        BEGIN
+            ALTER TABLE public.system_users ADD CONSTRAINT system_users_username_key UNIQUE (username);
+        EXCEPTION WHEN OTHERS THEN
+            NULL;
+        END;
+    END IF;
+END $$;
 
-CREATE POLICY "Permitir lectura publica/anon de sedes"
-    ON public.sedes FOR SELECT USING (true);
+-- 2. INSERTAR CREDENCIALES OFICIALES DE ADMINISTRADOR
+INSERT INTO public.system_users (id, name, username, password, email, role, campus, is_active)
+VALUES 
+  ('admin-harold', 'Harold Anguiano Morales', 'haroldo90', 'Chevropar#1970', 'haroldo90@geckosvoleibol.com', 'head_coach', 'Tlalnepantla', true),
+  ('admin-luis', 'Luis Gerardo Ángeles Falcón', 'clubgeckosvoleibol', 'GeckosAdmin#2026!', 'clubgeckosvoleibol@gmail.com', 'head_coach', 'Tlalnepantla', true)
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name,
+    username = EXCLUDED.username,
+    password = EXCLUDED.password,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    campus = EXCLUDED.campus,
+    is_active = true;
 
-CREATE POLICY "Permitir insercion y actualizacion publica/anon de sedes"
-    ON public.sedes FOR ALL USING (true);
+-- 3. TABLA DE SEDES DE ENTRENAMIENTO (usa gen_random_uuid nativo de Postgres 13+)
+CREATE TABLE IF NOT EXISTS public.sedes (
+    id TEXT PRIMARY KEY DEFAULT ('sede_' || gen_random_uuid()::text),
+    name TEXT NOT NULL UNIQUE,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
 
 -- Insertar sedes iniciales oficiales
 INSERT INTO public.sedes (name, is_active)
 VALUES ('Tlalnepantla', true), ('Cuautitlán Izcalli', true)
 ON CONFLICT (name) DO NOTHING;
 
--- 3. TABLA DE ALUMNOS REGISTRADOS (PADRÓN COMPLETO)
+-- 4. TABLA DE ALUMNOS REGISTRADOS (PADRÓN COMPLETO)
 CREATE TABLE IF NOT EXISTS public.students (
     id TEXT PRIMARY KEY,
     full_name TEXT NOT NULL,
@@ -97,16 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_students_campus ON public.students(campus);
 CREATE INDEX IF NOT EXISTS idx_students_category ON public.students(category);
 CREATE INDEX IF NOT EXISTS idx_students_is_active ON public.students(is_active);
 
--- Habilitar RLS en alumnos
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Permitir lectura completa de alumnos"
-    ON public.students FOR SELECT USING (true);
-
-CREATE POLICY "Permitir insercion, actualizacion y borrado de alumnos"
-    ON public.students FOR ALL USING (true);
-
--- 4. TABLA DE COMPROBANTES DE PAGO (MENSUALIDADES Y PAGOS EXTRAS)
+-- 5. TABLA DE COMPROBANTES DE PAGO (MENSUALIDADES Y PAGOS EXTRAS)
 CREATE TABLE IF NOT EXISTS public.payments (
     id TEXT PRIMARY KEY,
     student_id TEXT NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
@@ -135,16 +159,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_student_id ON public.payments(student_id
 CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
 CREATE INDEX IF NOT EXISTS idx_payments_type ON public.payments(payment_type);
 
--- Habilitar RLS en pagos
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Permitir lectura de pagos"
-    ON public.payments FOR SELECT USING (true);
-
-CREATE POLICY "Permitir gestion de pagos"
-    ON public.payments FOR ALL USING (true);
-
--- 5. TABLA DE CICLOS DE COBRO
+-- 6. TABLA DE CICLOS DE COBRO
 CREATE TABLE IF NOT EXISTS public.billing_cycles (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -157,10 +172,7 @@ CREATE TABLE IF NOT EXISTS public.billing_cycles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
-ALTER TABLE public.billing_cycles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Permitir gestion de ciclos" ON public.billing_cycles FOR ALL USING (true);
-
--- 6. TABLA DE NOTIFICACIONES DEL SISTEMA
+-- 7. TABLA DE NOTIFICACIONES DEL SISTEMA
 CREATE TABLE IF NOT EXISTS public.system_notifications (
     id TEXT PRIMARY KEY,
     target_role TEXT NOT NULL DEFAULT 'all',
@@ -173,8 +185,49 @@ CREATE TABLE IF NOT EXISTS public.system_notifications (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
+-- ====================================================================
+-- 8. POLÍTICAS DE SEGURIDAD ROW LEVEL SECURITY (RLS) IDEMPOTENTES
+-- ====================================================================
+
+ALTER TABLE public.system_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sedes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.billing_cycles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Permitir gestion de avisos" ON public.system_notifications FOR ALL USING (true);
+
+-- Limpieza preventiva de políticas previas para evitar error 42710 ('policy already exists')
+DROP POLICY IF EXISTS "Permitir todo en system_users" ON public.system_users;
+DROP POLICY IF EXISTS "Permitir lectura y gestion de usuarios" ON public.system_users;
+DROP POLICY IF EXISTS "Permitir lectura publica/anon de sedes" ON public.sedes;
+DROP POLICY IF EXISTS "Permitir insercion y actualizacion publica/anon de sedes" ON public.sedes;
+DROP POLICY IF EXISTS "Permitir todo en sedes" ON public.sedes;
+DROP POLICY IF EXISTS "Permitir lectura completa de alumnos" ON public.students;
+DROP POLICY IF EXISTS "Permitir insercion, actualizacion y borrado de alumnos" ON public.students;
+DROP POLICY IF EXISTS "Permitir todo en students" ON public.students;
+DROP POLICY IF EXISTS "Permitir lectura de pagos" ON public.payments;
+DROP POLICY IF EXISTS "Permitir gestion de pagos" ON public.payments;
+DROP POLICY IF EXISTS "Permitir todo en payments" ON public.payments;
+DROP POLICY IF EXISTS "Permitir gestion de ciclos" ON public.billing_cycles;
+DROP POLICY IF EXISTS "Permitir todo en billing_cycles" ON public.billing_cycles;
+DROP POLICY IF EXISTS "Permitir gestion de avisos" ON public.system_notifications;
+DROP POLICY IF EXISTS "Permitir todo en system_notifications" ON public.system_notifications;
+
+-- Crear políticas limpias y completas (SELECT, INSERT, UPDATE, DELETE)
+CREATE POLICY "Permitir todo en system_users" ON public.system_users FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo en sedes" ON public.sedes FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo en students" ON public.students FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo en payments" ON public.payments FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo en billing_cycles" ON public.billing_cycles FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo en system_notifications" ON public.system_notifications FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+
+-- Permisos de acceso directos para los roles del cliente de Supabase
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- 9. NOTIFICAR A POSTGREST PARA RECARGAR EL ESQUEMA EN VIVO
+NOTIFY pgrst, 'reload schema';
 `;
 
 export const DataManagementModal: React.FC<Props> = ({
