@@ -1,0 +1,103 @@
+export type UserRole = 'head_coach' | 'coach_assistant' | 'parent' | 'player';
+
+export type StudentCategory =
+  | 'Sub 23'
+  | 'Juvenil'
+  | 'Infantil'
+  | 'Mini'
+  | 'Sub-13'
+  | 'Sub-15'
+  | 'Sub-18'
+  | 'Libre Femenil'
+  | 'Libre Varonil';
+
+export interface Student {
+  id: string;
+  fullName: string;
+  birthDate?: string;
+  category: StudentCategory;
+  jerseyNumber: number;
+  branch: 'Femenil' | 'Varonil';
+  campus?: string; // Sede: Tlalnepantla, Cuautitlán Izcalli, etc.
+  whatsapp?: string;
+  allergies?: string;
+  chronicCondition?: string;
+  emergencyPhone?: string;
+  monthlyFee: number;
+  dueDay: number; // day of the month, e.g., 5 or 10
+  tutorName: string;
+  tutorPhone: string;
+  tutorEmail: string;
+  currentBalance: number; // 0 if up to date, >0 if owes
+  status: 'al_corriente' | 'adeudo' | 'en_revision';
+  joinedDate: string;
+  registrationType?: 'adult' | 'minor';
+  isActive?: boolean; // true = activo, false = inactivo / desactivado
+}
+
+
+export type PaymentMethod = 'Transferencia SPEI' | 'Depósito OXXO' | 'Efectivo en Cancha' | 'Tarjeta Débito/Crédito';
+
+export type PaymentStatus = 'pendiente' | 'aprobado' | 'rechazado';
+
+export type PaymentType = 'mensualidad' | 'extra';
+
+export type ExtraPaymentCategory =
+  | 'torneo'
+  | 'inscripcion'
+  | 'uniforme'
+  | 'arbitraje'
+  | 'transporte'
+  | 'otro';
+
+export interface PaymentRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  paymentType?: PaymentType;
+  extraCategory?: ExtraPaymentCategory;
+  eventName?: string;
+  concept: string; // e.g. "Torneo: Copa Cuautitlán 2026" or "Mensualidad Octubre 2026"
+  amount: number;
+  paymentDate: string;
+  reportedDate: string;
+  method: PaymentMethod;
+  referenceNumber: string;
+  receiptUrl: string; // Base64 or image url
+  status: PaymentStatus;
+  reviewedDate?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+  receiptFolio?: string; // e.g. "GCK-2026-1042" or "GCK-EXT-2026-1005"
+  notes?: string;
+}
+
+export interface BillingCycle {
+  id: string;
+  title: string; // "Mensualidad Octubre 2026"
+  period: string;
+  dueDate: string;
+  defaultFee: number;
+  totalExpected: number;
+  totalCollected: number;
+  totalPending: number;
+  createdAt: string;
+}
+
+export interface SystemNotification {
+  id: string;
+  targetRole: 'all' | 'parents' | 'players' | 'admin';
+  studentId?: string;
+  title: string;
+  message: string;
+  date: string;
+  type: 'reminder' | 'payment_approved' | 'payment_rejected' | 'new_payment_submitted' | 'announcement';
+  read: boolean;
+}
+
+export interface SupabaseConfig {
+  url: string;
+  anonKey: string;
+  connected: boolean;
+  lastSync?: string;
+}
