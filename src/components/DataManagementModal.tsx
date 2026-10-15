@@ -53,9 +53,13 @@ CREATE TABLE IF NOT EXISTS public.system_users (
     role TEXT NOT NULL DEFAULT 'coach_assistant', -- 'head_coach', 'coach_assistant', 'player'
     campus TEXT DEFAULT 'Tlalnepantla',
     assigned_student_id TEXT,
+    avatar_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+-- Asegurar columna avatar_url si la tabla ya existía
+ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- Asegurar restricción única en username de forma segura
 DO $$
@@ -120,10 +124,14 @@ CREATE TABLE IF NOT EXISTS public.students (
     status TEXT NOT NULL DEFAULT 'al_corriente',
     joined_date DATE NOT NULL DEFAULT CURRENT_DATE,
     registration_type TEXT NOT NULL DEFAULT 'minor',
+    photo_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+-- Asegurar columna photo_url si la tabla ya existía
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
 -- Índices para búsquedas de alumnos
 CREATE INDEX IF NOT EXISTS idx_students_campus ON public.students(campus);

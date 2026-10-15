@@ -337,52 +337,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                     />
                   </div>
 
-                  {/* Sede con opción de agregar nuevas sedes */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="font-semibold text-neutral-800">
-                        Sede de Entrenamiento *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowNewSedeInput(!showNewSedeInput)}
-                        className="text-[10px] text-[#363435] font-bold underline cursor-pointer"
-                      >
-                        + Agregar nueva sede
-                      </button>
-                    </div>
 
-                    <select
-                      value={adultForm.campus}
-                      onChange={(e) => setAdultForm({ ...adultForm, campus: e.target.value })}
-                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs font-medium"
-                    >
-                      {sedes.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-
-                    {showNewSedeInput && (
-                      <div className="mt-2 flex gap-1.5 animate-in fade-in">
-                        <input
-                          type="text"
-                          placeholder="Nombre de la nueva sede..."
-                          value={newSedeName}
-                          onChange={(e) => setNewSedeName(e.target.value)}
-                          className="flex-1 px-2.5 py-1.5 bg-white border border-neutral-300 rounded-lg text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleCreateSede}
-                          className="px-3 py-1.5 bg-[#363435] text-white font-bold rounded-lg text-xs hover:bg-black"
-                        >
-                          Guardar
-                        </button>
-                      </div>
-                    )}
-                  </div>
 
                   {/* Teléfono de emergencia */}
                   <div>
@@ -535,51 +490,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                       />
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="font-semibold text-neutral-800">
-                          Sede de Entrenamiento *
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowNewSedeInput(!showNewSedeInput)}
-                          className="text-[10px] text-[#363435] font-bold underline cursor-pointer"
-                        >
-                          + Agregar nueva sede
-                        </button>
-                      </div>
 
-                      <select
-                        value={tutorForm.campus}
-                        onChange={(e) => setTutorForm({ ...tutorForm, campus: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs font-medium"
-                      >
-                        {sedes.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-
-                      {showNewSedeInput && (
-                        <div className="mt-2 flex gap-1.5 animate-in fade-in">
-                          <input
-                            type="text"
-                            placeholder="Nombre de la nueva sede..."
-                            value={newSedeName}
-                            onChange={(e) => setNewSedeName(e.target.value)}
-                            className="flex-1 px-2.5 py-1.5 bg-white border border-neutral-300 rounded-lg text-xs"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleCreateSede}
-                            className="px-3 py-1.5 bg-[#363435] text-white font-bold rounded-lg text-xs hover:bg-black"
-                          >
-                            Guardar
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
 

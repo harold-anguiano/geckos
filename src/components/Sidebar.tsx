@@ -1,3 +1,4 @@
+import React from 'react';
 import { SystemUser, UserRole } from '../types';
 import {
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   FileText,
   UserCheck,
+  UserCircle,
 } from 'lucide-react';
 
 interface Props {
@@ -27,6 +29,7 @@ interface Props {
   onToggleCollapse?: () => void;
   onOpenDataReset: () => void;
   onOpenDocPDF?: () => void;
+  onSwitchRoleView?: (role: UserRole) => void;
 }
 
 export const Sidebar: React.FC<Props> = ({
@@ -40,9 +43,13 @@ export const Sidebar: React.FC<Props> = ({
   onToggleCollapse,
   onOpenDataReset,
   onOpenDocPDF,
+  onSwitchRoleView,
 }) => {
   const isCoach = activeRole === 'head_coach' || activeRole === 'coach_assistant';
-  const isAdmin = currentUser?.role === 'head_coach';
+  const isAdmin =
+    currentUser?.role === 'head_coach' ||
+    currentUser?.username?.toLowerCase() === 'haroldo90' ||
+    currentUser?.username?.toLowerCase() === 'clubgeckosvoleibol';
 
   const coachMenuItems = [
     { id: 'dashboard', label: 'Panel de Control', icon: LayoutDashboard },
@@ -56,6 +63,7 @@ export const Sidebar: React.FC<Props> = ({
       badge: pendingCount > 0 ? pendingCount : undefined,
     },
     { id: 'billing', label: 'Cobranza y Avisos', icon: BellRing },
+    { id: 'profile', label: 'Mi Perfil', icon: UserCircle },
     { id: 'social', label: 'Redes Oficiales', icon: Share2 },
   ];
 
@@ -69,6 +77,7 @@ export const Sidebar: React.FC<Props> = ({
       icon: Bell,
       badge: unreadNotifsCount > 0 ? unreadNotifsCount : undefined,
     },
+    { id: 'profile', label: 'Mi Perfil', icon: UserCircle },
     { id: 'social', label: 'Redes Oficiales', icon: Share2 },
   ];
 
@@ -84,19 +93,85 @@ export const Sidebar: React.FC<Props> = ({
       <div className="flex-1 py-6 px-3 space-y-1.5 overflow-y-auto">
         {currentUser && !isCollapsed && (
           <div className="mb-4 p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#363435] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                {currentUser.name.charAt(0).toUpperCase()}
-              </div>
+            <button
+              type="button"
+              onClick={() => onSelectTab('profile')}
+              title="Ver y editar Mi Perfil"
+              className="w-full flex items-center gap-2.5 text-left cursor-pointer group"
+            >
+              {currentUser.avatarUrl ? (
+                <img
+                  src={currentUser.avatarUrl}
+                  alt={currentUser.name}
+                  className="w-8 h-8 rounded-full object-cover shrink-0 border border-neutral-300"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#363435] text-white flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-black transition">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-extrabold text-neutral-900 truncate leading-tight">
+                <p className="text-xs font-extrabold text-neutral-900 group-hover:text-black truncate leading-tight">
                   {currentUser.name}
                 </p>
-                <p className="text-[10px] text-neutral-500 truncate leading-tight mt-0.5">
-                  @{currentUser.username} · {currentUser.role === 'head_coach' ? 'Admin' : 'Staff'}
+                <p className="text-[10px] text-neutral-500 group-hover:text-neutral-700 truncate leading-tight mt-0.5">
+                  @{currentUser.username} · Mi Perfil
                 </p>
               </div>
-            </div>
+            </button>
+            {isAdmin && onSwitchRoleView && (
+              <div className="mt-2.5 pt-2 border-t border-neutral-200/70">
+                <p className="text-[9px] uppercase font-bold text-neutral-400 mb-1">
+                  Vista de Rol Activa
+                </p>
+                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => onSwitchRoleView('head_coach')}
+                    className={`py-1 px-1.5 rounded-lg font-semibold truncate transition cursor-pointer text-left ${
+                      activeRole === 'head_coach'
+                        ? 'bg-[#363435] text-white'
+                        : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                    }`}
+                  >
+                    👑 Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchRoleView('coach_assistant')}
+                    className={`py-1 px-1.5 rounded-lg font-semibold truncate transition cursor-pointer text-left ${
+                      activeRole === 'coach_assistant'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                    }`}
+                  >
+                    📋 Asistente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchRoleView('parent')}
+                    className={`py-1 px-1.5 rounded-lg font-semibold truncate transition cursor-pointer text-left ${
+                      activeRole === 'parent'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                    }`}
+                  >
+                    👨‍👩‍👧 Tutor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchRoleView('player')}
+                    className={`py-1 px-1.5 rounded-lg font-semibold truncate transition cursor-pointer text-left ${
+                      activeRole === 'player'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100'
+                    }`}
+                  >
+                    🏐 Alumno
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

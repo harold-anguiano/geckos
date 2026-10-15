@@ -67,8 +67,8 @@ export const RoleSelector: React.FC<Props> = ({
         {/* Logo del negocio: No encapsulado, visto de tamaño optimizado */}
         <div className="w-full flex justify-center mb-5 sm:mb-6">
           <img
-            src="https://appdesignproyectos.com/geckoslogo.png"
-            alt="Geckop´s Voleibol"
+            src="https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckoslogo.png"
+            alt="Gecko´s Veoleibol"
             className="w-full max-w-[192px] xs:max-w-[224px] sm:max-w-[204px] md:max-w-[252px] lg:max-w-[252px] h-auto object-contain transition-transform duration-300 hover:scale-[1.01]"
           />
         </div>

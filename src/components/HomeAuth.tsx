@@ -3,6 +3,7 @@ import { Student, SystemUser } from '../types';
 import { Lock, User, Eye, EyeOff, LogIn, UserPlus, AlertCircle, Sparkles, Download, ShieldCheck } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { StudentRegistrationForm } from './StudentRegistrationForm';
+import { PWAInstallButton } from './PWAInstallButton';
 import { authenticateUser } from '../utils/auth';
 
 interface Props {
@@ -82,11 +83,11 @@ export const HomeAuth: React.FC<Props> = ({
 
       {/* Contenedor Principal: Logo + Pestañas de Acceso y Registro */}
       <div className="max-w-xl w-full mx-auto my-auto flex flex-col items-center min-w-0">
-        {/* Logotipo del club: Tamaños optimizados (40% reducido fullscreen/tablet, 20% móvil) */}
+        {/* Logotipo del club: Sin encapsular (sin marcos, sin fondos, sin círculos) */}
         <div className="w-full flex justify-center mb-6 sm:mb-8">
           <img
-            src="https://appdesignproyectos.com/geckoslogo.png"
-            alt="Geckos Voleibol"
+            src="https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckoslogo.png"
+            alt="Gecko´s Veoleibol"
             className="w-full max-w-[192px] xs:max-w-[224px] sm:max-w-[204px] md:max-w-[252px] lg:max-w-[252px] h-auto object-contain transition-transform duration-300 hover:scale-[1.01]"
           />
         </div>
@@ -234,14 +235,23 @@ export const HomeAuth: React.FC<Props> = ({
                 onAddSede={onAddSede}
                 onRegisterStudents={handleRegistrationComplete}
               />
+              {/* Botón oficial para instalar la app debajo del formulario de registro */}
+              <PWAInstallButton variant="home_banner" />
             </div>
           )}
         </div>
+
+        {/* Botón de instalación visible también en la pestaña de acceso para máxima accesibilidad */}
+        {activeTab === 'login' && (
+          <div className="w-full mt-3">
+            <PWAInstallButton variant="home_banner" />
+          </div>
+        )}
       </div>
 
       {/* Pie de página discreto */}
       <div className="w-full max-w-xl mx-auto flex flex-wrap items-center justify-between text-xs text-neutral-400 pt-6 gap-2">
-        <span>Geckos Voleibol · Temporada 2026</span>
+        <span>Gecko´s Veoleibol · Temporada 2026</span>
         <div className="flex items-center gap-4">
           {onOpenDocPDF && (
             <button

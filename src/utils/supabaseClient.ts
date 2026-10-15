@@ -66,6 +66,7 @@ export const mapRowToStudent = (row: any): Student => {
     joinedDate: row.joined_date || row.joinedDate || new Date().toISOString().split('T')[0],
     registrationType: (row.registration_type || row.registrationType || 'minor') as 'adult' | 'minor',
     isActive: row.is_active !== undefined ? Boolean(row.is_active) : row.isActive !== undefined ? Boolean(row.isActive) : true,
+    photoUrl: row.photo_url || row.photoUrl || '',
   };
 };
 
@@ -93,6 +94,7 @@ export const mapStudentToRow = (student: Student): any => {
     joined_date: student.joinedDate,
     registration_type: student.registrationType || 'minor',
     is_active: student.isActive !== false,
+    photo_url: student.photoUrl || null,
   };
 };
 

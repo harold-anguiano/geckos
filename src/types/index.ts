@@ -11,6 +11,7 @@ export interface SystemUser {
   campus?: string;
   assignedStudentId?: string;
   isActive: boolean;
+  avatarUrl?: string; // Fotografía de perfil en base64 o URL
   createdAt?: string;
 }
 
@@ -47,6 +48,7 @@ export interface Student {
   joinedDate: string;
   registrationType?: 'adult' | 'minor';
   isActive?: boolean; // true = activo, false = inactivo / desactivado
+  photoUrl?: string; // Fotografía del alumno
 }
 
 

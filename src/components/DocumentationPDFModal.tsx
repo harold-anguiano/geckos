@@ -50,8 +50,8 @@ export const DocumentationPDFModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b-2 border-neutral-900 gap-4">
             <div>
               <img
-                src="https://appdesignproyectos.com/geckoslogo.png"
-                alt="Geckos Voleibol"
+                src="https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckoslogo.png"
+                alt="Gecko´s Veoleibol"
                 className="h-16 sm:h-20 w-auto object-contain"
               />
             </div>

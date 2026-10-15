@@ -50,8 +50,11 @@ export const getStoredUsers = (): SystemUser[] => {
         userMap.set(admin.username.toLowerCase(), {
           ...admin,
           ...(existing || {}),
-          password: admin.password, // Siempre asegurar la contraseña solicitada
-          name: admin.name,
+          password: existing?.password || admin.password,
+          name: existing?.name || admin.name,
+          email: existing?.email || admin.email,
+          phone: existing?.phone || admin.phone,
+          avatarUrl: existing?.avatarUrl,
           role: 'head_coach',
           isActive: true,
         });
@@ -329,6 +332,7 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
         campus: d.campus || 'Tlalnepantla',
         assignedStudentId: d.assigned_student_id,
         isActive: d.is_active !== false,
+        avatarUrl: d.avatar_url || d.avatarUrl || '',
         createdAt: d.created_at,
       }));
 
@@ -340,7 +344,11 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
         userMap.set(a.username.toLowerCase(), {
           ...a,
           ...(exist || {}),
-          password: a.password,
+          password: exist?.password || a.password,
+          name: exist?.name || a.name,
+          email: exist?.email || a.email,
+          phone: exist?.phone || a.phone,
+          avatarUrl: exist?.avatarUrl || a.avatarUrl,
           role: 'head_coach',
           isActive: true,
         });
@@ -354,4 +362,75 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
     console.info('Aviso Supabase usuarios sync:', err);
   }
   return getStoredUsers();
+};
+
+/**
+ * Actualizar perfil de usuario (nombre, correo, teléfono, foto, contraseña)
+ */
+export const updateUserProfile = async (
+  userId: string,
+  data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    avatarUrl?: string;
+    password?: string;
+  }
+): Promise<{ success: boolean; user?: SystemUser; error?: string }> => {
+  const users = getStoredUsers();
+  const index = users.findIndex((u) => u.id === userId);
+
+  let targetUser: SystemUser | null = index !== -1 ? users[index] : null;
+
+  if (!targetUser) {
+    const current = getCurrentSessionUser();
+    if (current && (current.id === userId || current.username === userId)) {
+      targetUser = current;
+    }
+  }
+
+  if (!targetUser) {
+    return { success: false, error: 'Usuario no encontrado en el sistema.' };
+  }
+
+  const updatedUser: SystemUser = {
+    ...targetUser,
+    name: data.name !== undefined && data.name.trim() !== '' ? data.name.trim() : targetUser.name,
+    email: data.email !== undefined ? data.email.trim() : targetUser.email,
+    phone: data.phone !== undefined ? data.phone.trim() : targetUser.phone,
+    avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : targetUser.avatarUrl,
+    password: data.password !== undefined && data.password.trim() !== '' ? data.password.trim() : targetUser.password,
+  };
+
+  const updatedUsers = index !== -1
+    ? users.map((u, i) => (i === index ? updatedUser : u))
+    : [...users, updatedUser];
+
+  saveStoredUsers(updatedUsers);
+
+  // Si es la sesión activa, sincronizar sesión
+  const current = getCurrentSessionUser();
+  if (current && (current.id === updatedUser.id || current.username === updatedUser.username)) {
+    setCurrentSessionUser(updatedUser);
+  }
+
+  // Sincronizar en segundo plano con Supabase si está disponible
+  try {
+    const client = getSupabaseClient();
+    await client.from('system_users').upsert({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      username: updatedUser.username,
+      password: updatedUser.password,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      role: updatedUser.role,
+      avatar_url: updatedUser.avatarUrl,
+      is_active: updatedUser.isActive !== false,
+    });
+  } catch (err) {
+    console.warn('Aviso al actualizar perfil en Supabase:', err);
+  }
+
+  return { success: true, user: updatedUser };
 };

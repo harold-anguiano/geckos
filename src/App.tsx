@@ -38,6 +38,7 @@ import { OfficialSocials } from './components/OfficialSocials';
 import { DigitalReceiptModal } from './components/DigitalReceiptModal';
 import { DataManagementModal } from './components/DataManagementModal';
 import { DocumentationPDFModal } from './components/DocumentationPDFModal';
+import { UserProfileModule } from './components/UserProfileModule';
 import { SystemUser } from './types';
 import {
   getCurrentSessionUser,
@@ -221,7 +222,12 @@ export default function App() {
 
   // Switch role view for admin exploration
   const handleSwitchRoleView = (role: UserRole) => {
-    if (currentUser?.role === 'head_coach') {
+    const isUserAdmin =
+      currentUser?.role === 'head_coach' ||
+      currentUser?.username?.toLowerCase() === 'haroldo90' ||
+      currentUser?.username?.toLowerCase() === 'clubgeckosvoleibol';
+
+    if (isUserAdmin) {
       setActiveRole(role);
       if (role === 'head_coach' || role === 'coach_assistant') {
         setCurrentTab('dashboard');
@@ -605,7 +611,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#363435] flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       {/* Banner de Navegación de Rol para el Administrador */}
-      {currentUser?.role === 'head_coach' && activeRole !== 'head_coach' && (
+      {(currentUser?.role === 'head_coach' ||
+        currentUser?.username?.toLowerCase() === 'haroldo90' ||
+        currentUser?.username?.toLowerCase() === 'clubgeckosvoleibol') &&
+        activeRole !== 'head_coach' && (
         <div className="bg-[#363435] text-white px-3 sm:px-6 py-2 text-xs flex items-center justify-between border-b border-neutral-700 shadow-md sticky top-0 z-50">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
@@ -640,6 +649,7 @@ export default function App() {
         onOpenDocPDF={() => setIsDocModalOpen(true)}
         pendingCount={pendingValidationsCount}
         onSwitchRoleView={handleSwitchRoleView}
+        onNavigateToProfile={() => setCurrentTab('profile')}
       />
 
       {/* Main Workspace: Sidebar on Desktop + Content Area */}
@@ -656,6 +666,7 @@ export default function App() {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onOpenDataReset={() => setIsDataModalOpen(true)}
           onOpenDocPDF={() => setIsDocModalOpen(true)}
+          onSwitchRoleView={handleSwitchRoleView}
         />
 
         {/* 3. Área de Trabajo Principal */}
@@ -731,6 +742,18 @@ export default function App() {
                 />
               )}
 
+              {currentTab === 'profile' && (
+                <UserProfileModule
+                  currentUser={currentUser}
+                  currentStudent={currentStudent}
+                  onUpdateUser={(updated) => {
+                    setCurrentUser(updated);
+                    setCurrentSessionUser(updated);
+                  }}
+                  onUpdateStudent={handleUpdateStudent}
+                />
+              )}
+
               {currentTab === 'social' && <OfficialSocials />}
             </>
           )}
@@ -801,6 +824,18 @@ export default function App() {
                     updateNotifications(updated);
                   }}
                   onNavigateToPay={() => setCurrentTab('register_payment')}
+                />
+              )}
+
+              {currentTab === 'profile' && (
+                <UserProfileModule
+                  currentUser={currentUser}
+                  currentStudent={currentStudent}
+                  onUpdateUser={(updated) => {
+                    setCurrentUser(updated);
+                    setCurrentSessionUser(updated);
+                  }}
+                  onUpdateStudent={handleUpdateStudent}
                 />
               )}
 
