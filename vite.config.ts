@@ -17,9 +17,9 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         manifest: {
           id: '/',
-          name: 'Geckos Voleibol',
-          short_name: 'Geckos Voleibol',
-          description: 'Sistema de gestión deportiva, control de cuotas y validación de pagos para Geckos Voleibol.',
+          name: 'Gecko´s Veoleibol',
+          short_name: 'Gecko´s Veoleibol',
+          description: 'Sistema de gestión deportiva, control de cuotas y validación de pagos para Gecko´s Veoleibol.',
           theme_color: '#363435',
           background_color: '#ffffff',
           display: 'standalone',
@@ -27,13 +27,13 @@ export default defineConfig(() => {
           scope: '/',
           icons: [
             {
-              src: 'https://appdesignproyectos.com/geckosicono.png',
+              src: 'https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckosicono.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any',
             },
             {
-              src: 'https://appdesignproyectos.com/geckosicono.png',
+              src: 'https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckosicono.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',

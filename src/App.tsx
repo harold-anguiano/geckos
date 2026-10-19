@@ -18,7 +18,7 @@ import {
   saveSedes,
   DEFAULT_SEDES,
 } from './utils/storage';
-import { supabaseService } from './utils/supabaseClient';
+import { supabaseService, getSupabaseClient } from './utils/supabaseClient';
 
 import { HomeAuth } from './components/HomeAuth';
 import { Header } from './components/Header';
@@ -38,11 +38,13 @@ import { OfficialSocials } from './components/OfficialSocials';
 import { DigitalReceiptModal } from './components/DigitalReceiptModal';
 import { DataManagementModal } from './components/DataManagementModal';
 import { DocumentationPDFModal } from './components/DocumentationPDFModal';
+import { UserProfileModule } from './components/UserProfileModule';
 import { SystemUser } from './types';
 import {
   getCurrentSessionUser,
   setCurrentSessionUser,
   getStoredUsers,
+  saveStoredUsers,
   syncUsersFromSupabase,
 } from './utils/auth';
 
@@ -164,14 +166,72 @@ export default function App() {
     }));
     const updated = [...registered, ...students];
     updateStudents(updated);
-    if (!currentStudent && registered.length > 0) {
+    if (registered.length > 0) {
       setCurrentStudent(registered[0]);
     }
 
-    // Persist each to Supabase in background
+    // Persist each student to Supabase in background
     registered.forEach((st) => {
       supabaseService.upsertStudent(st).catch(console.warn);
     });
+
+    // Crear cuenta de usuario (SystemUser) y conectar sesión inmediatamente
+    if (registered.length > 0) {
+      const primary = registered[0];
+      const isMinor = primary.registrationType === 'minor';
+      const targetRole: UserRole = isMinor ? 'parent' : 'player';
+      const displayName = isMinor ? (primary.tutorName || primary.fullName) : primary.fullName;
+      const primaryUsername = primary.whatsapp || primary.tutorPhone || primary.id;
+
+      const newUser: SystemUser = {
+        id: `user-${primary.id}`,
+        name: displayName,
+        username: primaryUsername,
+        password: primary.password || 'geckos2026',
+        email: primary.tutorEmail || '',
+        phone: primary.whatsapp || primary.tutorPhone || '',
+        role: targetRole,
+        assignedStudentId: primary.id,
+        campus: primary.campus,
+        isActive: true,
+        avatarUrl: primary.photoUrl || '',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Guardar usuario en storage local
+      const currentUsers = getStoredUsers();
+      saveStoredUsers([
+        ...currentUsers.filter((u) => u.username.toLowerCase() !== newUser.username.toLowerCase()),
+        newUser,
+      ]);
+
+      // Guardar usuario en Supabase system_users en background
+      try {
+        const client = getSupabaseClient();
+        client
+          .from('system_users')
+          .upsert({
+            id: newUser.id,
+            name: newUser.name,
+            username: newUser.username,
+            password: newUser.password,
+            phone: newUser.phone,
+            email: newUser.email,
+            role: newUser.role,
+            is_active: true,
+            avatar_url: newUser.avatarUrl || null,
+          })
+          .then(
+            () => {},
+            (err) => console.warn('Error al guardar nuevo usuario en Supabase:', err)
+          );
+      } catch (err) {
+        console.warn('Error al guardar nuevo usuario en Supabase:', err);
+      }
+
+      // Auto-iniciar sesión y navegar directo a su portal sin bloqueos
+      handleLoginSuccess(newUser, primary);
+    }
   };
 
   // Save changes to localStorage whenever data changes
@@ -200,16 +260,34 @@ export default function App() {
     setCurrentUser(user);
     setCurrentSessionUser(user);
 
-    const targetRole: UserRole = user.role === 'player' ? 'player' : user.role;
+    const targetRole: UserRole = user.role;
     setActiveRole(targetRole);
 
     if (student) {
       setCurrentStudent(student);
     } else if (user.assignedStudentId) {
       const found = students.find((s) => s.id === user.assignedStudentId);
-      if (found) setCurrentStudent(found);
-    } else if (targetRole === 'player') {
-      if (students.length > 0) setCurrentStudent(students[0]);
+      if (found) {
+        setCurrentStudent(found);
+      } else if (students.length > 0) {
+        setCurrentStudent(students[0]);
+      }
+    } else if (targetRole === 'player' || targetRole === 'parent') {
+      const normUName = (user.name || '').toLowerCase().trim();
+      const uPhoneDigits = (user.phone || user.username || '').replace(/\D/g, '');
+      const found = students.find((s) => {
+        const sPhone = (s.whatsapp || s.tutorPhone || '').replace(/\D/g, '');
+        return (
+          (uPhoneDigits.length >= 7 && sPhone.slice(-10) === uPhoneDigits.slice(-10)) ||
+          (s.fullName && s.fullName.toLowerCase().trim() === normUName) ||
+          (s.tutorName && s.tutorName.toLowerCase().trim() === normUName)
+        );
+      });
+      if (found) {
+        setCurrentStudent(found);
+      } else if (students.length > 0) {
+        setCurrentStudent(students[0]);
+      }
     }
 
     if (targetRole === 'head_coach' || targetRole === 'coach_assistant') {
@@ -221,7 +299,12 @@ export default function App() {
 
   // Switch role view for admin exploration
   const handleSwitchRoleView = (role: UserRole) => {
-    if (currentUser?.role === 'head_coach') {
+    const isUserAdmin =
+      currentUser?.role === 'head_coach' ||
+      currentUser?.username?.toLowerCase() === 'haroldo90' ||
+      currentUser?.username?.toLowerCase() === 'clubgeckosvoleibol';
+
+    if (isUserAdmin) {
       setActiveRole(role);
       if (role === 'head_coach' || role === 'coach_assistant') {
         setCurrentTab('dashboard');
@@ -605,7 +688,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#363435] flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       {/* Banner de Navegación de Rol para el Administrador */}
-      {currentUser?.role === 'head_coach' && activeRole !== 'head_coach' && (
+      {(currentUser?.role === 'head_coach' ||
+        currentUser?.username?.toLowerCase() === 'haroldo90' ||
+        currentUser?.username?.toLowerCase() === 'clubgeckosvoleibol') &&
+        activeRole !== 'head_coach' && (
         <div className="bg-[#363435] text-white px-3 sm:px-6 py-2 text-xs flex items-center justify-between border-b border-neutral-700 shadow-md sticky top-0 z-50">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
@@ -640,6 +726,7 @@ export default function App() {
         onOpenDocPDF={() => setIsDocModalOpen(true)}
         pendingCount={pendingValidationsCount}
         onSwitchRoleView={handleSwitchRoleView}
+        onNavigateToProfile={() => setCurrentTab('profile')}
       />
 
       {/* Main Workspace: Sidebar on Desktop + Content Area */}
@@ -656,6 +743,7 @@ export default function App() {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           onOpenDataReset={() => setIsDataModalOpen(true)}
           onOpenDocPDF={() => setIsDocModalOpen(true)}
+          onSwitchRoleView={handleSwitchRoleView}
         />
 
         {/* 3. Área de Trabajo Principal */}
@@ -731,6 +819,18 @@ export default function App() {
                 />
               )}
 
+              {currentTab === 'profile' && (
+                <UserProfileModule
+                  currentUser={currentUser}
+                  currentStudent={currentStudent}
+                  onUpdateUser={(updated) => {
+                    setCurrentUser(updated);
+                    setCurrentSessionUser(updated);
+                  }}
+                  onUpdateStudent={handleUpdateStudent}
+                />
+              )}
+
               {currentTab === 'social' && <OfficialSocials />}
             </>
           )}
@@ -741,7 +841,23 @@ export default function App() {
               {currentTab === 'account' && currentStudent && (
                 <AccountStatus
                   currentStudent={currentStudent}
-                  students={students}
+                  students={
+                    // Si es padre de familia, mostrar sus hijos; si es jugador adulto, solo a sí mismo
+                    (() => {
+                      const family = students.filter((s) => {
+                        if (s.id === currentStudent.id) return true;
+                        const normTutor = (currentStudent.tutorName || '').toLowerCase().trim();
+                        const sNormTutor = (s.tutorName || '').toLowerCase().trim();
+                        const tutorPhoneDigits = (currentStudent.tutorPhone || currentStudent.whatsapp || '').replace(/\D/g, '');
+                        const sTutorDigits = (s.tutorPhone || s.whatsapp || '').replace(/\D/g, '');
+                        return (
+                          (Boolean(normTutor) && Boolean(sNormTutor) && normTutor === sNormTutor) ||
+                          (tutorPhoneDigits.length >= 7 && sTutorDigits.length >= 7 && sTutorDigits.slice(-10) === tutorPhoneDigits.slice(-10))
+                        );
+                      });
+                      return family.length > 0 ? family : [currentStudent];
+                    })()
+                  }
                   onSelectStudent={setCurrentStudent}
                   payments={payments}
                   onNavigateToPay={() => setCurrentTab('register_payment')}
@@ -752,8 +868,8 @@ export default function App() {
 
               {currentTab === 'account' && !currentStudent && (
                 <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center text-xs text-neutral-400">
-                  <p className="font-semibold text-neutral-700">No hay alumno seleccionado</p>
-                  <p className="mt-1">El Head Coach aún no ha dado de alta jugadores en el sistema.</p>
+                  <p className="font-semibold text-neutral-700">Cargando datos del alumno...</p>
+                  <p className="mt-1">Si la información tarda en aparecer, pulsa en tu perfil o refresca la página.</p>
                 </div>
               )}
 
@@ -801,6 +917,18 @@ export default function App() {
                     updateNotifications(updated);
                   }}
                   onNavigateToPay={() => setCurrentTab('register_payment')}
+                />
+              )}
+
+              {currentTab === 'profile' && (
+                <UserProfileModule
+                  currentUser={currentUser}
+                  currentStudent={currentStudent}
+                  onUpdateUser={(updated) => {
+                    setCurrentUser(updated);
+                    setCurrentSessionUser(updated);
+                  }}
+                  onUpdateStudent={handleUpdateStudent}
                 />
               )}
 

@@ -14,6 +14,10 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronUp,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Props {
@@ -41,6 +45,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
   const [showNewSedeInput, setShowNewSedeInput] = useState(false);
   const [newSedeName, setNewSedeName] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Formulario Mayor de Edad
   const [adultForm, setAdultForm] = useState({
@@ -53,7 +58,10 @@ export const StudentRegistrationForm: React.FC<Props> = ({
     emergencyPhone: '',
     category: 'Sub 23' as StudentCategory,
     branch: 'Femenil' as 'Femenil' | 'Varonil',
+    password: '',
+    confirmPassword: '',
   });
+  const [showAdultPass, setShowAdultPass] = useState(false);
 
   // Formulario Tutor (Menores de edad)
   const [tutorForm, setTutorForm] = useState({
@@ -61,7 +69,10 @@ export const StudentRegistrationForm: React.FC<Props> = ({
     whatsapp: '',
     campus: sedes[0] || 'Tlalnepantla',
     emergencyPhone: '',
+    password: '',
+    confirmPassword: '',
   });
+  const [showTutorPass, setShowTutorPass] = useState(false);
 
   const [children, setChildren] = useState<MinorChildForm[]>([
     {
@@ -117,7 +128,22 @@ export const StudentRegistrationForm: React.FC<Props> = ({
 
   const handleSubmitAdult = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adultForm.fullName.trim() || !adultForm.whatsapp.trim()) return;
+    setErrorMessage(null);
+
+    if (!adultForm.fullName.trim() || !adultForm.whatsapp.trim()) {
+      setErrorMessage('Por favor ingresa tu nombre completo y número de WhatsApp.');
+      return;
+    }
+
+    if (!adultForm.password || adultForm.password.trim().length < 4) {
+      setErrorMessage('Por favor crea una contraseña de al menos 4 caracteres para tu cuenta.');
+      return;
+    }
+
+    if (adultForm.password !== adultForm.confirmPassword) {
+      setErrorMessage('Las contraseñas no coinciden. Por favor confirma tu contraseña correctamente.');
+      return;
+    }
 
     const newStudent: Omit<Student, 'id' | 'joinedDate'> = {
       fullName: adultForm.fullName.trim(),
@@ -138,10 +164,11 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       currentBalance: 800,
       status: 'adeudo',
       registrationType: 'adult',
+      password: adultForm.password.trim(),
     };
 
     onRegisterStudents([newStudent]);
-    setSuccessMessage(`¡Registro exitoso! Alumno ${adultForm.fullName} registrado en Geckos Voleibol.`);
+    setSuccessMessage(`¡Registro exitoso! Bienvenido ${adultForm.fullName} a Gecko´s Veoleibol.`);
     setAdultForm({
       fullName: '',
       birthDate: '',
@@ -152,16 +179,36 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       emergencyPhone: '',
       category: 'Sub 23',
       branch: 'Femenil',
+      password: '',
+      confirmPassword: '',
     });
     setTimeout(() => setSuccessMessage(null), 5000);
   };
 
   const handleSubmitTutor = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tutorForm.tutorName.trim() || !tutorForm.whatsapp.trim()) return;
+    setErrorMessage(null);
+
+    if (!tutorForm.tutorName.trim() || !tutorForm.whatsapp.trim()) {
+      setErrorMessage('Por favor ingresa tu nombre de tutor y número de WhatsApp.');
+      return;
+    }
+
+    if (!tutorForm.password || tutorForm.password.trim().length < 4) {
+      setErrorMessage('Por favor crea una contraseña de al menos 4 caracteres para tu cuenta de tutor.');
+      return;
+    }
+
+    if (tutorForm.password !== tutorForm.confirmPassword) {
+      setErrorMessage('Las contraseñas no coinciden. Por favor confirma tu contraseña correctamente.');
+      return;
+    }
 
     const validChildren = children.filter((c) => c.fullName.trim().length > 0);
-    if (validChildren.length === 0) return;
+    if (validChildren.length === 0) {
+      setErrorMessage('Por favor ingresa los datos de al menos un alumno / hijo.');
+      return;
+    }
 
     const studentsToRegister: Omit<Student, 'id' | 'joinedDate'>[] = validChildren.map((ch, idx) => ({
       fullName: ch.fullName.trim(),
@@ -182,6 +229,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       currentBalance: 750,
       status: 'adeudo',
       registrationType: 'minor',
+      password: tutorForm.password.trim(),
     }));
 
     onRegisterStudents(studentsToRegister);
@@ -193,6 +241,8 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       whatsapp: '',
       campus: sedes[0] || 'Tlalnepantla',
       emergencyPhone: '',
+      password: '',
+      confirmPassword: '',
     });
     setChildren([
       {
@@ -337,52 +387,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                     />
                   </div>
 
-                  {/* Sede con opción de agregar nuevas sedes */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="font-semibold text-neutral-800">
-                        Sede de Entrenamiento *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowNewSedeInput(!showNewSedeInput)}
-                        className="text-[10px] text-[#363435] font-bold underline cursor-pointer"
-                      >
-                        + Agregar nueva sede
-                      </button>
-                    </div>
 
-                    <select
-                      value={adultForm.campus}
-                      onChange={(e) => setAdultForm({ ...adultForm, campus: e.target.value })}
-                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs font-medium"
-                    >
-                      {sedes.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-
-                    {showNewSedeInput && (
-                      <div className="mt-2 flex gap-1.5 animate-in fade-in">
-                        <input
-                          type="text"
-                          placeholder="Nombre de la nueva sede..."
-                          value={newSedeName}
-                          onChange={(e) => setNewSedeName(e.target.value)}
-                          className="flex-1 px-2.5 py-1.5 bg-white border border-neutral-300 rounded-lg text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleCreateSede}
-                          className="px-3 py-1.5 bg-[#363435] text-white font-bold rounded-lg text-xs hover:bg-black"
-                        >
-                          Guardar
-                        </button>
-                      </div>
-                    )}
-                  </div>
 
                   {/* Teléfono de emergencia */}
                   <div>
@@ -535,51 +540,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                       />
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="font-semibold text-neutral-800">
-                          Sede de Entrenamiento *
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowNewSedeInput(!showNewSedeInput)}
-                          className="text-[10px] text-[#363435] font-bold underline cursor-pointer"
-                        >
-                          + Agregar nueva sede
-                        </button>
-                      </div>
 
-                      <select
-                        value={tutorForm.campus}
-                        onChange={(e) => setTutorForm({ ...tutorForm, campus: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs font-medium"
-                      >
-                        {sedes.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-
-                      {showNewSedeInput && (
-                        <div className="mt-2 flex gap-1.5 animate-in fade-in">
-                          <input
-                            type="text"
-                            placeholder="Nombre de la nueva sede..."
-                            value={newSedeName}
-                            onChange={(e) => setNewSedeName(e.target.value)}
-                            className="flex-1 px-2.5 py-1.5 bg-white border border-neutral-300 rounded-lg text-xs"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleCreateSede}
-                            className="px-3 py-1.5 bg-[#363435] text-white font-bold rounded-lg text-xs hover:bg-black"
-                          >
-                            Guardar
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
 

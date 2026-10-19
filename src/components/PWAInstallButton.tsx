@@ -3,22 +3,12 @@ import { Download, Check, Smartphone, Monitor, X } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface Props {
-  variant?: 'header' | 'compact' | 'card';
+  variant?: 'header' | 'compact' | 'card' | 'home_banner';
 }
 
 export const PWAInstallButton: React.FC<Props> = ({ variant = 'header' }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showModal, setShowModal] = useState(false);
-
-  if (isInstalled) {
-    if (variant === 'compact') return null;
-    return (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-medium border border-emerald-200">
-        <Check className="w-3.5 h-3.5" />
-        <span>App Instalada</span>
-      </div>
-    );
-  }
 
   const handleInstallClick = async () => {
     if (isInstallable) {
@@ -29,37 +19,80 @@ export const PWAInstallButton: React.FC<Props> = ({ variant = 'header' }) => {
     }
   };
 
+  if (isInstalled) {
+    if (variant === 'compact') return null;
+    return (
+      <div className={`flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200 ${
+        variant === 'home_banner' ? 'w-full justify-center shadow-xs' : ''
+      }`}>
+        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+        <span>Aplicación Instalada en este Dispositivo</span>
+      </div>
+    );
+  }
+
   return (
     <>
-      <button
-        onClick={handleInstallClick}
-        title="Instalar Geckos Voleibol en tu dispositivo"
-        className={`flex items-center gap-1.5 rounded-lg font-medium transition-all shadow-xs active:scale-95 shrink-0 ${
-          variant === 'header'
-            ? 'bg-[#363435] text-white hover:bg-[#000000] px-2.5 py-1.5 sm:px-3 text-xs'
-            : 'bg-[#363435] text-white hover:bg-[#000000] px-4 py-2 text-sm w-full justify-center'
-        }`}
-      >
-        <Download className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-        <span className="hidden xs:inline whitespace-nowrap">Instalar</span>
-      </button>
+      {variant === 'home_banner' ? (
+        <div className="w-full mt-5 pt-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-neutral-50/80 border border-neutral-200/90">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Ícono Oficial: Sin encapsular (sin marco circular ni badge) */}
+            <img
+              src="https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckosicono.png"
+              alt="Gecko´s Veoleibol"
+              className="w-10 h-10 object-contain shrink-0"
+            />
+            <div className="text-left min-w-0">
+              <h4 className="text-xs sm:text-sm font-extrabold text-neutral-900 leading-tight">
+                Instalar Gecko´s Veoleibol
+              </h4>
+              <p className="text-[11px] text-neutral-500 leading-tight mt-0.5">
+                Acceso directo rápido desde tu pantalla de inicio
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleInstallClick}
+            className="w-full sm:w-auto px-4 py-2 bg-[#363435] hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+          >
+            <Download className="w-4 h-4 text-amber-400" />
+            <span>Instalar App</span>
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleInstallClick}
+          title="Instalar Gecko´s Veoleibol en tu dispositivo"
+          className={`flex items-center gap-1.5 rounded-lg font-medium transition-all shadow-xs active:scale-95 shrink-0 ${
+            variant === 'header'
+              ? 'bg-[#363435] text-white hover:bg-[#000000] px-2.5 py-1.5 sm:px-3 text-xs'
+              : 'bg-[#363435] text-white hover:bg-[#000000] px-4 py-2 text-sm w-full justify-center'
+          }`}
+        >
+          <Download className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+          <span className="hidden xs:inline whitespace-nowrap">Instalar</span>
+        </button>
+      )}
 
       {/* Instructional modal for iOS, Desktop Chrome/Edge and Android fallback */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-200 text-[#363435]">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                {/* Ícono sin encapsular */}
                 <img
-                  src="https://appdesignproyectos.com/geckosicono.png"
-                  alt="Geckos Voleibol"
-                  className="w-7 h-7 object-contain"
+                  src="https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckosicono.png"
+                  alt="Gecko´s Veoleibol"
+                  className="w-8 h-8 object-contain shrink-0"
                 />
-                <h3 className="text-base font-bold text-neutral-900">Instalar Geckos Voleibol</h3>
+                <h3 className="text-base font-bold text-neutral-900">Instalar Gecko´s Veoleibol</h3>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
+                className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>

@@ -50,8 +50,11 @@ export const getStoredUsers = (): SystemUser[] => {
         userMap.set(admin.username.toLowerCase(), {
           ...admin,
           ...(existing || {}),
-          password: admin.password, // Siempre asegurar la contraseña solicitada
-          name: admin.name,
+          password: existing?.password || admin.password,
+          name: existing?.name || admin.name,
+          email: existing?.email || admin.email,
+          phone: existing?.phone || admin.phone,
+          avatarUrl: existing?.avatarUrl,
           role: 'head_coach',
           isActive: true,
         });
@@ -93,12 +96,26 @@ export const setCurrentSessionUser = (user: SystemUser | null): void => {
   }
 };
 
+// Helper para normalizar cadenas de texto (sin acentos ni mayúsculas)
+const normalizeAuthText = (text?: string): string =>
+  (text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+// Helper para extraer sólo dígitos de números de teléfono
+const normalizePhoneDigits = (val?: string): string => (val || '').replace(/\D/g, '');
+
 /**
- * Autenticación en el sistema:
+ * Autenticación integral en el sistema Gecko´s:
  * Admite:
- * 1. Administradores (Harold Anguiano Morales y Luis Gerardo Ángeles Falcón)
- * 2. Entrenadores registrados por el admin
- * 3. Alumnos registrados (usando su teléfono/WhatsApp de contacto, correo del tutor, o nombre de usuario)
+ * 1. Administradores Oficiales (Harold y Luis)
+ * 2. Entrenadores Asistentes creados por el Administrador
+ * 3. Alumnos y Padres/Tutores registrados:
+ *    - Identificador: Número de WhatsApp / Teléfono, Nombre del Alumno, Nombre del Tutor, Correo o ID
+ *    - Contraseña: La contraseña personalizada elegida en el formulario de registro,
+ *      o alternativamente su número telefónico registrado, o geckos2026 / 123456 / número de dorsal.
  */
 export const authenticateUser = (
   identifierRaw: string,
@@ -109,39 +126,95 @@ export const authenticateUser = (
   const password = passwordRaw.trim();
 
   if (!identifier || !password) {
-    return { success: false, error: 'Por favor ingresa tu usuario o correo y contraseña.' };
+    return { success: false, error: 'Por favor ingresa tu usuario, WhatsApp o correo y tu contraseña.' };
   }
 
   const users = getStoredUsers();
+  const normIdentifier = normalizeAuthText(identifierRaw);
+  const cleanPhone = normalizePhoneDigits(identifierRaw);
 
-  // 1. Buscar en usuarios registrados (Admins y Entrenadores)
-  const systemUser = users.find(
-    (u) =>
-      u.username.toLowerCase() === identifier ||
-      (u.email && u.email.toLowerCase() === identifier)
-  );
+  // 1. Buscar en usuarios registrados (Admins, Entrenadores y Cuentas de Sistema)
+  const systemUser = users.find((u) => {
+    const usernameMatch = u.username.toLowerCase() === identifier;
+    const emailMatch = Boolean(u.email && u.email.toLowerCase() === identifier);
+    const uPhoneDigits = normalizePhoneDigits(u.phone || u.username);
+    const phoneMatch = Boolean(
+      cleanPhone.length >= 7 &&
+      uPhoneDigits.length >= 7 &&
+      (uPhoneDigits.slice(-10) === cleanPhone.slice(-10) ||
+       uPhoneDigits.includes(cleanPhone) ||
+       cleanPhone.includes(uPhoneDigits))
+    );
+    const nameMatch = normalizeAuthText(u.name) === normIdentifier;
+    return usernameMatch || emailMatch || phoneMatch || nameMatch;
+  });
 
   if (systemUser) {
     if (!systemUser.isActive) {
       return { success: false, error: 'Esta cuenta ha sido desactivada por el administrador.' };
     }
-    if (systemUser.password !== password) {
-      return { success: false, error: 'Contraseña incorrecta. Verifica tus datos.' };
+    if (systemUser.password && systemUser.password !== password) {
+      return { success: false, error: 'Contraseña incorrecta. Verifica tus datos de acceso.' };
     }
-    return { success: true, user: systemUser };
+
+    // Si es un usuario de tipo alumno o tutor, buscar su registro de estudiante correspondiente
+    let matchedSt = students.find((s) => s.id === systemUser.assignedStudentId);
+    if (!matchedSt && (systemUser.role === 'player' || systemUser.role === 'parent')) {
+      matchedSt = students.find((s) => {
+        const uPhoneDigits = normalizePhoneDigits(systemUser.phone || systemUser.username);
+        const sPhone = normalizePhoneDigits(s.whatsapp || s.tutorPhone || '');
+        return (
+          (uPhoneDigits.length >= 7 && sPhone.slice(-10) === uPhoneDigits.slice(-10)) ||
+          normalizeAuthText(s.fullName) === normalizeAuthText(systemUser.name) ||
+          (s.tutorName && normalizeAuthText(s.tutorName) === normalizeAuthText(systemUser.name))
+        );
+      });
+    }
+
+    return { success: true, user: systemUser, student: matchedSt };
   }
 
-  // 2. Buscar en alumnos registrados
-  // Los alumnos pueden ingresar con su teléfono (WhatsApp), correo del tutor, o nombre completo
-  const cleanPhone = identifier.replace(/\D/g, '');
+  // 2. Buscar en la lista de alumnos registrados (Tanto mayores de edad como alumnos con tutor)
   const matchedStudent = students.find((s) => {
-    const phoneMatch = cleanPhone.length >= 7 && (
-      (s.whatsapp && s.whatsapp.replace(/\D/g, '').includes(cleanPhone)) ||
-      (s.tutorPhone && s.tutorPhone.replace(/\D/g, '').includes(cleanPhone))
+    // Coincidencia telefónica (WhatsApp del alumno o teléfono del tutor)
+    const sWhatsappDigits = normalizePhoneDigits(s.whatsapp);
+    const sTutorDigits = normalizePhoneDigits(s.tutorPhone);
+    const phoneMatch = Boolean(
+      cleanPhone.length >= 7 && (
+        (sWhatsappDigits.length >= 7 && (
+          sWhatsappDigits.slice(-10) === cleanPhone.slice(-10) ||
+          sWhatsappDigits.includes(cleanPhone) ||
+          cleanPhone.includes(sWhatsappDigits)
+        )) ||
+        (sTutorDigits.length >= 7 && (
+          sTutorDigits.slice(-10) === cleanPhone.slice(-10) ||
+          sTutorDigits.includes(cleanPhone) ||
+          cleanPhone.includes(sTutorDigits)
+        ))
+      )
     );
-    const emailMatch = s.tutorEmail && s.tutorEmail.toLowerCase() === identifier;
-    const nameMatch = s.fullName.toLowerCase() === identifier;
-    return phoneMatch || emailMatch || nameMatch;
+
+    // Coincidencia por correo del tutor
+    const emailMatch = Boolean(s.tutorEmail && s.tutorEmail.trim().toLowerCase() === identifier);
+
+    // Coincidencia por nombre completo del alumno (con tolerancia a acentos)
+    const sNameNorm = normalizeAuthText(s.fullName);
+    const nameMatch =
+      Boolean(sNameNorm) &&
+      (sNameNorm === normIdentifier ||
+        (normIdentifier.length >= 4 && (sNameNorm.includes(normIdentifier) || normIdentifier.includes(sNameNorm))));
+
+    // Coincidencia por nombre del tutor (para padres de familia)
+    const tutorNameNorm = s.tutorName ? normalizeAuthText(s.tutorName) : '';
+    const tutorNameMatch =
+      Boolean(tutorNameNorm) &&
+      (tutorNameNorm === normIdentifier ||
+        (normIdentifier.length >= 4 && (tutorNameNorm.includes(normIdentifier) || normIdentifier.includes(tutorNameNorm))));
+
+    // Coincidencia por ID único de estudiante
+    const idMatch = s.id.toLowerCase() === identifier;
+
+    return phoneMatch || emailMatch || nameMatch || tutorNameMatch || idMatch;
   });
 
   if (matchedStudent) {
@@ -149,43 +222,78 @@ export const authenticateUser = (
       return { success: false, error: 'El registro del alumno se encuentra inactivo. Contacta a administración.' };
     }
 
-    // Para alumnos, la contraseña por defecto es su número de teléfono o los últimos 4 dígitos o una clave asignada
-    const validStudentPasswords = [
-      matchedStudent.whatsapp?.replace(/\D/g, ''),
-      matchedStudent.tutorPhone?.replace(/\D/g, ''),
-      matchedStudent.jerseyNumber ? String(matchedStudent.jerseyNumber) : null,
-      'geckos2026',
-      '123456',
-    ].filter(Boolean);
+    // Validación de contraseñas permitidas para el alumno / tutor:
+    // a) Contraseña elegida por el usuario en el registro (CRÍTICO: ahora plenamente respetada)
+    const hasCustomPass = Boolean(matchedStudent.password && matchedStudent.password.trim() === password);
 
-    const isStudentPassValid =
-      validStudentPasswords.includes(password.replace(/\D/g, '')) ||
-      password === 'geckos2026' ||
-      password === '123456' ||
-      (matchedStudent.whatsapp && password === matchedStudent.whatsapp);
+    // b) Contraseña con dígitos del teléfono registrado
+    const passDigits = normalizePhoneDigits(password);
+    const sWhatsappDigits = normalizePhoneDigits(matchedStudent.whatsapp);
+    const sTutorDigits = normalizePhoneDigits(matchedStudent.tutorPhone);
+    const hasPhonePass = Boolean(
+      passDigits.length >= 7 && (
+        (sWhatsappDigits.length >= 7 && (sWhatsappDigits.slice(-10) === passDigits.slice(-10) || sWhatsappDigits === passDigits)) ||
+        (sTutorDigits.length >= 7 && (sTutorDigits.slice(-10) === passDigits.slice(-10) || sTutorDigits === passDigits))
+      )
+    );
+
+    // c) Contraseñas comodín del club
+    const hasDefaultPass = password === 'geckos2026' || password === '123456';
+
+    // d) Número de dorsal
+    const hasJerseyPass = Boolean(matchedStudent.jerseyNumber && String(matchedStudent.jerseyNumber) === password);
+
+    // e) Coincidencia directa de texto con el WhatsApp
+    const hasExactPhoneStr = Boolean(
+      (matchedStudent.whatsapp && password === matchedStudent.whatsapp.trim()) ||
+      (matchedStudent.tutorPhone && password === matchedStudent.tutorPhone.trim())
+    );
+
+    const isStudentPassValid = hasCustomPass || hasPhonePass || hasDefaultPass || hasJerseyPass || hasExactPhoneStr;
 
     if (isStudentPassValid) {
+      const isMinor = matchedStudent.registrationType === 'minor';
+      const cleanPhoneMatchWithTutor = Boolean(
+        cleanPhone.length >= 7 && sTutorDigits.length >= 7 && sTutorDigits.slice(-10) === cleanPhone.slice(-10)
+      );
+      const isTutorMatched = Boolean(
+        matchedStudent.tutorName &&
+        (normalizeAuthText(matchedStudent.tutorName) === normIdentifier || cleanPhoneMatchWithTutor)
+      );
+      const isParentRole = isMinor || isTutorMatched;
+
       const studentUser: SystemUser = {
         id: `user-${matchedStudent.id}`,
-        name: matchedStudent.fullName,
-        username: matchedStudent.whatsapp || matchedStudent.id,
-        email: matchedStudent.tutorEmail,
-        phone: matchedStudent.whatsapp || matchedStudent.tutorPhone,
-        role: 'player',
+        name: isParentRole ? (matchedStudent.tutorName || matchedStudent.fullName) : matchedStudent.fullName,
+        username: matchedStudent.whatsapp || matchedStudent.tutorPhone || matchedStudent.id,
+        email: matchedStudent.tutorEmail || '',
+        phone: matchedStudent.whatsapp || matchedStudent.tutorPhone || '',
+        role: isParentRole ? 'parent' : 'player',
         assignedStudentId: matchedStudent.id,
         campus: matchedStudent.campus,
         isActive: true,
+        avatarUrl: matchedStudent.photoUrl || '',
       };
+
+      // Asegurar que quede registrado en los usuarios locales
+      const currentUsers = getStoredUsers();
+      if (!currentUsers.some((u) => u.username.toLowerCase() === studentUser.username.toLowerCase())) {
+        saveStoredUsers([...currentUsers, studentUser]);
+      }
+
       return { success: true, user: studentUser, student: matchedStudent };
     } else {
       return {
         success: false,
-        error: 'Contraseña incorrecta para el alumno. (Tip: Puedes usar el número de WhatsApp registrado o geckos2026).',
+        error: 'Contraseña incorrecta. Ingresa la contraseña creada al registrarte o tu número de WhatsApp de contacto.',
       };
     }
   }
 
-  return { success: false, error: 'Usuario o correo no encontrado. Verifica las credenciales o regístrate en el formulario.' };
+  return {
+    success: false,
+    error: 'Usuario, número o nombre no encontrado. Verifica las credenciales o regístrate en la pestaña de Registro.',
+  };
 };
 
 /**
@@ -329,6 +437,7 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
         campus: d.campus || 'Tlalnepantla',
         assignedStudentId: d.assigned_student_id,
         isActive: d.is_active !== false,
+        avatarUrl: d.avatar_url || d.avatarUrl || '',
         createdAt: d.created_at,
       }));
 
@@ -340,7 +449,11 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
         userMap.set(a.username.toLowerCase(), {
           ...a,
           ...(exist || {}),
-          password: a.password,
+          password: exist?.password || a.password,
+          name: exist?.name || a.name,
+          email: exist?.email || a.email,
+          phone: exist?.phone || a.phone,
+          avatarUrl: exist?.avatarUrl || a.avatarUrl,
           role: 'head_coach',
           isActive: true,
         });
@@ -354,4 +467,75 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
     console.info('Aviso Supabase usuarios sync:', err);
   }
   return getStoredUsers();
+};
+
+/**
+ * Actualizar perfil de usuario (nombre, correo, teléfono, foto, contraseña)
+ */
+export const updateUserProfile = async (
+  userId: string,
+  data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    avatarUrl?: string;
+    password?: string;
+  }
+): Promise<{ success: boolean; user?: SystemUser; error?: string }> => {
+  const users = getStoredUsers();
+  const index = users.findIndex((u) => u.id === userId);
+
+  let targetUser: SystemUser | null = index !== -1 ? users[index] : null;
+
+  if (!targetUser) {
+    const current = getCurrentSessionUser();
+    if (current && (current.id === userId || current.username === userId)) {
+      targetUser = current;
+    }
+  }
+
+  if (!targetUser) {
+    return { success: false, error: 'Usuario no encontrado en el sistema.' };
+  }
+
+  const updatedUser: SystemUser = {
+    ...targetUser,
+    name: data.name !== undefined && data.name.trim() !== '' ? data.name.trim() : targetUser.name,
+    email: data.email !== undefined ? data.email.trim() : targetUser.email,
+    phone: data.phone !== undefined ? data.phone.trim() : targetUser.phone,
+    avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : targetUser.avatarUrl,
+    password: data.password !== undefined && data.password.trim() !== '' ? data.password.trim() : targetUser.password,
+  };
+
+  const updatedUsers = index !== -1
+    ? users.map((u, i) => (i === index ? updatedUser : u))
+    : [...users, updatedUser];
+
+  saveStoredUsers(updatedUsers);
+
+  // Si es la sesión activa, sincronizar sesión
+  const current = getCurrentSessionUser();
+  if (current && (current.id === updatedUser.id || current.username === updatedUser.username)) {
+    setCurrentSessionUser(updatedUser);
+  }
+
+  // Sincronizar en segundo plano con Supabase si está disponible
+  try {
+    const client = getSupabaseClient();
+    await client.from('system_users').upsert({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      username: updatedUser.username,
+      password: updatedUser.password,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      role: updatedUser.role,
+      avatar_url: updatedUser.avatarUrl,
+      is_active: updatedUser.isActive !== false,
+    });
+  } catch (err) {
+    console.warn('Aviso al actualizar perfil en Supabase:', err);
+  }
+
+  return { success: true, user: updatedUser };
 };

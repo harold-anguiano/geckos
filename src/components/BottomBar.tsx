@@ -9,6 +9,7 @@ import {
   CreditCard,
   History,
   Bell,
+  UserCircle,
 } from 'lucide-react';
 
 interface Props {
@@ -38,8 +39,8 @@ export const BottomBar: React.FC<Props> = ({
       icon: CheckCircle2,
       badge: pendingCount > 0 ? pendingCount : undefined,
     },
-    { id: 'billing', label: 'Cobranza', icon: BellRing },
-    { id: 'social', label: 'Redes', icon: Share2 },
+    { id: 'billing', label: 'Cobro', icon: BellRing },
+    { id: 'profile', label: 'Perfil', icon: UserCircle },
   ];
 
   const parentTabs = [
@@ -52,14 +53,14 @@ export const BottomBar: React.FC<Props> = ({
       icon: Bell,
       badge: unreadNotifsCount > 0 ? unreadNotifsCount : undefined,
     },
-    { id: 'social', label: 'Redes', icon: Share2 },
+    { id: 'profile', label: 'Perfil', icon: UserCircle },
   ];
 
   const tabs = isCoach ? coachTabs : parentTabs;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200 shadow-lg pb-safe w-full max-w-full overflow-hidden">
-      <div className={`grid ${tabs.length === 6 ? 'grid-cols-6' : 'grid-cols-5'} h-16 items-center px-1 max-w-lg mx-auto w-full min-w-0`}>
+      <div className={`grid ${tabs.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'} h-16 items-center px-1 max-w-lg mx-auto w-full min-w-0`}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;

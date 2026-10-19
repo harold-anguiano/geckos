@@ -49,8 +49,8 @@ export const DigitalReceiptModal: React.FC<Props> = ({
           {/* Logo del negocio de tamaño completo (sin encapsular) */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b-2 border-neutral-900">
             <img
-              src="https://appdesignproyectos.com/geckoslogo.png"
-              alt="Geckos Voleibol"
+              src="https://avchpdtkogejgnomkxua.supabase.co/storage/v1/object/public/iconos/geckoslogo.png"
+              alt="Gecko´s Veoleibol"
               className="h-14 sm:h-16 w-auto object-contain"
             />
             <div className="text-center sm:text-right">

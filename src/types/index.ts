@@ -7,10 +7,11 @@ export interface SystemUser {
   password?: string;
   email?: string;
   phone?: string;
-  role: 'head_coach' | 'coach_assistant' | 'player';
+  role: 'head_coach' | 'coach_assistant' | 'player' | 'parent';
   campus?: string;
   assignedStudentId?: string;
   isActive: boolean;
+  avatarUrl?: string; // Fotografía de perfil en base64 o URL
   createdAt?: string;
 }
 
@@ -47,6 +48,8 @@ export interface Student {
   joinedDate: string;
   registrationType?: 'adult' | 'minor';
   isActive?: boolean; // true = activo, false = inactivo / desactivado
+  photoUrl?: string; // Fotografía del alumno
+  password?: string; // Contraseña personal elegida en el registro
 }
 
 
