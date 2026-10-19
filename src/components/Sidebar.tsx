@@ -181,7 +181,8 @@ export const Sidebar: React.FC<Props> = ({
 
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentTab === item.id;
+          const isActive =
+            currentTab === item.id || (!isCoach && item.id === 'account' && currentTab === 'dashboard');
           return (
             <button
               key={item.id}

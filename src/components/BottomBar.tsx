@@ -63,7 +63,8 @@ export const BottomBar: React.FC<Props> = ({
       <div className={`grid ${tabs.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'} h-16 items-center px-1 max-w-lg mx-auto w-full min-w-0`}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
+          const isActive =
+            currentTab === tab.id || (!isCoach && tab.id === 'account' && currentTab === 'dashboard');
           return (
             <button
               key={tab.id}

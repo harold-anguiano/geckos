@@ -56,16 +56,6 @@ export const HomeAuth: React.FC<Props> = ({
 
   const handleRegistrationComplete = (newStudentsList: Omit<Student, 'id' | 'joinedDate'>[]) => {
     onRegisterStudents(newStudentsList);
-    // Cambiar a la pestaña de login con datos prellenados si la sesión no cambiara de inmediato
-    setActiveTab('login');
-    if (newStudentsList.length > 0) {
-      const first = newStudentsList[0];
-      setIdentifier(first.whatsapp || first.tutorPhone || first.fullName);
-      if (first.password) {
-        setPassword(first.password);
-      }
-      setErrorMessage(null);
-    }
   };
 
   return (

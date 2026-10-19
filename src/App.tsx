@@ -838,7 +838,7 @@ export default function App() {
           {/* Player / Parent Routes */}
           {!isCoach && (
             <>
-              {currentTab === 'account' && currentStudent && (
+              {(currentTab === 'account' || currentTab === 'dashboard') && currentStudent && (
                 <AccountStatus
                   currentStudent={currentStudent}
                   students={
@@ -866,7 +866,7 @@ export default function App() {
                 />
               )}
 
-              {currentTab === 'account' && !currentStudent && (
+              {(currentTab === 'account' || currentTab === 'dashboard') && !currentStudent && (
                 <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center text-xs text-neutral-400">
                   <p className="font-semibold text-neutral-700">Cargando datos del alumno...</p>
                   <p className="mt-1">Si la información tarda en aparecer, pulsa en tu perfil o refresca la página.</p>
