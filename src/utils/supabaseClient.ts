@@ -21,11 +21,29 @@ const sanitizeSupabaseUrl = (url: string) => {
 let supabaseInstance: SupabaseClient | null = null;
 
 export const getSupabaseClient = (url?: string, anonKey?: string): SupabaseClient => {
-  const targetUrl = sanitizeSupabaseUrl(url || DEFAULT_SUPABASE_CONFIG.url);
-  const targetKey = (anonKey || DEFAULT_SUPABASE_CONFIG.anonKey).trim();
+  let targetUrl = url;
+  let targetKey = anonKey;
+
+  if (!targetUrl || !targetKey) {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('geckops_supabase_config') : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.url && parsed.anonKey) {
+          targetUrl = parsed.url;
+          targetKey = parsed.anonKey;
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  const cleanUrl = sanitizeSupabaseUrl(targetUrl || DEFAULT_SUPABASE_CONFIG.url);
+  const cleanKey = (targetKey || DEFAULT_SUPABASE_CONFIG.anonKey).trim();
 
   if (!supabaseInstance) {
-    supabaseInstance = createClient(targetUrl, targetKey, {
+    supabaseInstance = createClient(cleanUrl, cleanKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -68,6 +86,8 @@ export const mapRowToStudent = (row: any): Student => {
     isActive: row.is_active !== undefined ? Boolean(row.is_active) : row.isActive !== undefined ? Boolean(row.isActive) : true,
     photoUrl: row.photo_url || row.photoUrl || '',
     password: row.password || '',
+    username: row.username || '',
+    email: row.email || row.tutor_email || '',
   };
 };
 
@@ -89,7 +109,7 @@ export const mapStudentToRow = (student: Student): any => {
     due_day: student.dueDay,
     tutor_name: student.tutorName,
     tutor_phone: student.tutorPhone,
-    tutor_email: student.tutorEmail || '',
+    tutor_email: student.tutorEmail || student.email || '',
     current_balance: student.currentBalance,
     status: student.status,
     joined_date: student.joinedDate,
@@ -97,6 +117,8 @@ export const mapStudentToRow = (student: Student): any => {
     is_active: student.isActive !== false,
     photo_url: student.photoUrl || null,
     password: student.password || null,
+    username: student.username || null,
+    email: student.email || student.tutorEmail || null,
   };
 };
 

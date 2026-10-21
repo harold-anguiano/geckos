@@ -13,7 +13,7 @@ interface Props {
   onOpenDocPDF?: () => void;
   sedes: string[];
   onAddSede: (newSede: string) => void;
-  onRegisterStudents: (newStudents: Omit<Student, 'id' | 'joinedDate'>[]) => void;
+  onRegisterStudents: (newStudents: Omit<Student, 'id' | 'joinedDate'>[]) => Promise<any> | void;
 }
 
 export const HomeAuth: React.FC<Props> = ({
@@ -54,8 +54,8 @@ export const HomeAuth: React.FC<Props> = ({
     }
   };
 
-  const handleRegistrationComplete = (newStudentsList: Omit<Student, 'id' | 'joinedDate'>[]) => {
-    onRegisterStudents(newStudentsList);
+  const handleRegistrationComplete = async (newStudentsList: Omit<Student, 'id' | 'joinedDate'>[]) => {
+    return await onRegisterStudents(newStudentsList);
   };
 
   return (
@@ -141,10 +141,10 @@ export const HomeAuth: React.FC<Props> = ({
               )}
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
-                {/* Campo Usuario / Correo */}
+                {/* Campo Usuario / Correo / WhatsApp */}
                 <div>
                   <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
-                    Usuario o Correo Electrónico
+                    Usuario, Correo o WhatsApp / Teléfono
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -152,12 +152,15 @@ export const HomeAuth: React.FC<Props> = ({
                       type="text"
                       autoComplete="username"
                       required
-                      placeholder="Ej. haroldo90, clubgeckosvoleibol o WhatsApp"
+                      placeholder="Ej. valeria26, valeria@gmail.com o 5512345678"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:border-[#363435] focus:ring-2 focus:ring-[#363435]/10 bg-neutral-50/50 hover:bg-white transition"
                     />
                   </div>
+                  <span className="text-[10px] text-neutral-400 mt-1 block">
+                    Ingresa con tu usuario registrado, tu correo o tu WhatsApp/Teléfono.
+                  </span>
                 </div>
 
                 {/* Campo Contraseña */}

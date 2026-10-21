@@ -121,11 +121,36 @@ export default function App() {
           setCoaches(syncedUsers.filter((u) => u.role === 'coach_assistant'));
         }
 
-        if (studentsRes.students && studentsRes.students.length > 0) {
-          setStudents(studentsRes.students);
-          saveStudents(studentsRes.students);
-          if (!currentStudent && studentsRes.students.length > 0) {
-            setCurrentStudent(studentsRes.students[0]);
+        if (studentsRes.students) {
+          const remoteMap = new Map(studentsRes.students.map((s) => [s.id, s]));
+          const localMap = new Map(loadedStudents.map((s) => [s.id, s]));
+
+          // Mapear alumnos remotos
+          const mergedStudents: Student[] = studentsRes.students.map((remote) => {
+            const local = localMap.get(remote.id);
+            return {
+              ...remote,
+              password: remote.password || local?.password || '',
+              username: remote.username || local?.username || '',
+              email: remote.email || local?.email || remote.tutorEmail || '',
+            };
+          });
+
+          // PRESERVAR Y AUTO-SINCRONIZAR AQUELLOS ALUMNOS LOCALES QUE NO ESTÉN EN SUPABASE AÚN
+          loadedStudents.forEach((local) => {
+            if (!remoteMap.has(local.id)) {
+              mergedStudents.unshift(local);
+              // Auto-subir a Supabase en background para que quede guardado remotamente
+              supabaseService.upsertStudent(local).catch((e) =>
+                console.warn('Auto-sync alumno local a Supabase:', e)
+              );
+            }
+          });
+
+          setStudents(mergedStudents);
+          saveStudents(mergedStudents);
+          if (!currentStudent && mergedStudents.length > 0) {
+            setCurrentStudent(mergedStudents[0]);
           }
         }
         if (paymentsRes.payments && paymentsRes.payments.length > 0) {
@@ -155,9 +180,9 @@ export default function App() {
     }
   };
 
-  const handleRegisterStudentsFromForm = (
+  const handleRegisterStudentsFromForm = async (
     newStudentsList: Omit<Student, 'id' | 'joinedDate'>[]
-  ) => {
+  ): Promise<{ success: boolean; error?: string }> => {
     const registered: Student[] = newStudentsList.map((s, idx) => ({
       ...s,
       id: `std-${Date.now()}-${idx}`,
@@ -170,25 +195,36 @@ export default function App() {
       setCurrentStudent(registered[0]);
     }
 
-    // Persist each student to Supabase in background
-    registered.forEach((st) => {
-      supabaseService.upsertStudent(st).catch(console.warn);
-    });
+    // Persistir cada alumno en Supabase de forma asíncrona garantizada
+    let saveError: string | null = null;
+    for (const st of registered) {
+      const res = await supabaseService.upsertStudent(st);
+      if (!res.success && res.error) {
+        saveError = res.error;
+        console.error('Error al guardar alumno en Supabase:', res.error);
+      }
+    }
 
-    // Crear cuenta de usuario (SystemUser) y conectar sesión inmediatamente
+    // Crear cuenta de usuario (SystemUser) y persistir en Supabase
     if (registered.length > 0) {
       const primary = registered[0];
       const isMinor = primary.registrationType === 'minor';
       const targetRole: UserRole = isMinor ? 'parent' : 'player';
       const displayName = isMinor ? (primary.tutorName || primary.fullName) : primary.fullName;
-      const primaryUsername = primary.whatsapp || primary.tutorPhone || primary.id;
+      const primaryUsername =
+        primary.username?.trim().toLowerCase() ||
+        primary.whatsapp ||
+        primary.tutorPhone ||
+        primary.id;
+      const primaryEmail = primary.email || primary.tutorEmail || '';
+      const primaryPassword = primary.password || 'geckos2026';
 
       const newUser: SystemUser = {
         id: `user-${primary.id}`,
         name: displayName,
         username: primaryUsername,
-        password: primary.password || 'geckos2026',
-        email: primary.tutorEmail || '',
+        password: primaryPassword,
+        email: primaryEmail,
         phone: primary.whatsapp || primary.tutorPhone || '',
         role: targetRole,
         assignedStudentId: primary.id,
@@ -205,26 +241,36 @@ export default function App() {
         newUser,
       ]);
 
-      // Guardar usuario en Supabase system_users en background
+      // Guardar usuario en Supabase system_users de forma segura evitando colisiones de username
       try {
         const client = getSupabaseClient();
-        client
+        const { data: existingUser } = await client
           .from('system_users')
-          .upsert({
-            id: newUser.id,
-            name: newUser.name,
-            username: newUser.username,
-            password: newUser.password,
-            phone: newUser.phone,
-            email: newUser.email,
-            role: newUser.role,
-            is_active: true,
-            avatar_url: newUser.avatarUrl || null,
-          })
-          .then(
-            () => {},
-            (err) => console.warn('Error al guardar nuevo usuario en Supabase:', err)
-          );
+          .select('id')
+          .eq('username', newUser.username)
+          .maybeSingle();
+
+        const userPayload = {
+          id: existingUser ? existingUser.id : newUser.id,
+          name: newUser.name,
+          username: newUser.username,
+          password: newUser.password,
+          phone: newUser.phone,
+          email: newUser.email,
+          role: newUser.role,
+          is_active: true,
+          avatar_url: newUser.avatarUrl || null,
+          assigned_student_id: newUser.assignedStudentId || null,
+          campus: newUser.campus || 'Tlalnepantla',
+        };
+
+        const { error: userErr } = await client
+          .from('system_users')
+          .upsert(userPayload, { onConflict: 'id' });
+
+        if (userErr) {
+          console.warn('Error al guardar nuevo usuario en Supabase:', userErr.message);
+        }
       } catch (err) {
         console.warn('Error al guardar nuevo usuario en Supabase:', err);
       }
@@ -232,6 +278,11 @@ export default function App() {
       // Auto-iniciar sesión y navegar directo a su portal sin bloqueos
       handleLoginSuccess(newUser, primary);
     }
+
+    if (saveError) {
+      return { success: false, error: saveError };
+    }
+    return { success: true };
   };
 
   // Save changes to localStorage whenever data changes

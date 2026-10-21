@@ -194,8 +194,16 @@ export const authenticateUser = (
       )
     );
 
-    // Coincidencia por correo del tutor
-    const emailMatch = Boolean(s.tutorEmail && s.tutorEmail.trim().toLowerCase() === identifier);
+    // Coincidencia por correo (alumno o tutor)
+    const emailMatch = Boolean(
+      (s.tutorEmail && s.tutorEmail.trim().toLowerCase() === identifier) ||
+      (s.email && s.email.trim().toLowerCase() === identifier)
+    );
+
+    // Coincidencia por nombre de usuario registrado
+    const usernameMatch = Boolean(
+      s.username && s.username.trim().toLowerCase() === identifier
+    );
 
     // Coincidencia por nombre completo del alumno (con tolerancia a acentos)
     const sNameNorm = normalizeAuthText(s.fullName);
@@ -214,7 +222,7 @@ export const authenticateUser = (
     // Coincidencia por ID único de estudiante
     const idMatch = s.id.toLowerCase() === identifier;
 
-    return phoneMatch || emailMatch || nameMatch || tutorNameMatch || idMatch;
+    return phoneMatch || emailMatch || usernameMatch || nameMatch || tutorNameMatch || idMatch;
   });
 
   if (matchedStudent) {
@@ -265,9 +273,14 @@ export const authenticateUser = (
       const studentUser: SystemUser = {
         id: `user-${matchedStudent.id}`,
         name: isParentRole ? (matchedStudent.tutorName || matchedStudent.fullName) : matchedStudent.fullName,
-        username: matchedStudent.whatsapp || matchedStudent.tutorPhone || matchedStudent.id,
-        email: matchedStudent.tutorEmail || '',
+        username:
+          matchedStudent.username ||
+          matchedStudent.whatsapp ||
+          matchedStudent.tutorPhone ||
+          matchedStudent.id,
+        email: matchedStudent.email || matchedStudent.tutorEmail || '',
         phone: matchedStudent.whatsapp || matchedStudent.tutorPhone || '',
+        password: matchedStudent.password || '',
         role: isParentRole ? 'parent' : 'player',
         assignedStudentId: matchedStudent.id,
         campus: matchedStudent.campus,
@@ -441,9 +454,19 @@ export const syncUsersFromSupabase = async (): Promise<SystemUser[]> => {
         createdAt: d.created_at,
       }));
 
-      // Fusionar asegurando siempre a Harold y a Luis
+      // Fusionar asegurando que los usuarios locales existentes nunca se pierdan
       const userMap = new Map<string, SystemUser>();
-      mapped.forEach((u) => userMap.set(u.username.toLowerCase(), u));
+      const localUsers = getStoredUsers();
+      localUsers.forEach((u) => userMap.set(u.username.toLowerCase(), u));
+
+      mapped.forEach((u) => {
+        const existing = userMap.get(u.username.toLowerCase());
+        userMap.set(u.username.toLowerCase(), {
+          ...(existing || {}),
+          ...u,
+          password: u.password || existing?.password || '',
+        });
+      });
       DEFAULT_ADMIN_USERS.forEach((a) => {
         const exist = userMap.get(a.username.toLowerCase());
         userMap.set(a.username.toLowerCase(), {

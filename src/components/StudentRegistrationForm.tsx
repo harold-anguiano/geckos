@@ -18,12 +18,17 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Copy,
+  Check,
+  ShieldCheck,
+  AtSign,
+  RefreshCw,
 } from 'lucide-react';
 
 interface Props {
   sedes: string[];
   onAddSede: (newSede: string) => void;
-  onRegisterStudents: (newStudents: Omit<Student, 'id' | 'joinedDate'>[]) => void;
+  onRegisterStudents: (newStudents: Omit<Student, 'id' | 'joinedDate'>[]) => Promise<any> | void;
 }
 
 interface MinorChildForm {
@@ -34,6 +39,111 @@ interface MinorChildForm {
   allergies: string;
   chronicCondition: string;
 }
+
+// Verificación de contraseñas seguras según las especificaciones
+export const evaluatePasswordStrength = (password: string, confirmPassword: string) => {
+  const startsWithUpper = /^[A-ZÁÉÍÓÚÑ]/.test(password);
+  const minLength = password.length >= 8;
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-#+=\[\]\\/`~;]/.test(password);
+  const passwordsMatch = Boolean(password && confirmPassword && password === confirmPassword);
+  const allValid = startsWithUpper && minLength && hasNumber && hasSpecial && passwordsMatch;
+
+  return {
+    startsWithUpper,
+    minLength,
+    hasNumber,
+    hasSpecial,
+    passwordsMatch,
+    allValid,
+  };
+};
+
+export const generateSecurePassword = (): string => {
+  const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowers = 'abcdefghijkmnpqrstuvwxyz';
+  const numbers = '23456789';
+  const specials = '!@#$%&*-_+=?';
+
+  // 1. Debe iniciar obligatoriamente con una letra Mayúscula (A-Z)
+  const firstUpper = uppers[Math.floor(Math.random() * uppers.length)];
+
+  // 2. Garantizar al menos un número, caracter especial y minúscula
+  const charLower = lowers[Math.floor(Math.random() * lowers.length)];
+  const charNumber = numbers[Math.floor(Math.random() * numbers.length)];
+  const charSpecial = specials[Math.floor(Math.random() * specials.length)];
+
+  // 3. Relleno aleatorio para completar 10-11 caracteres seguros
+  const allPool = lowers + numbers + specials + uppers;
+  let extra = '';
+  for (let i = 0; i < 7; i++) {
+    extra += allPool[Math.floor(Math.random() * allPool.length)];
+  }
+
+  // Mezclar los caracteres internos garantizando que la primera letra sea mayúscula
+  const shuffledBody = (charLower + charNumber + charSpecial + extra)
+    .split('')
+    .sort(() => 0.5 - Math.random())
+    .join('');
+
+  return firstUpper + shuffledBody;
+};
+
+// Componente visual interactivo para la lista de verificación de contraseña
+const PasswordRulesChecklist: React.FC<{
+  password: string;
+  confirmPassword: string;
+}> = ({ password, confirmPassword }) => {
+  const rules = evaluatePasswordStrength(password, confirmPassword);
+
+  const items = [
+    { label: 'Iniciar con letra Mayúscula (A-Z)', met: rules.startsWithUpper },
+    { label: 'Mínimo 8 caracteres de longitud', met: rules.minLength },
+    { label: 'Contener al menos un número (0-9)', met: rules.hasNumber },
+    { label: 'Contener un caracter especial (!@#$%&*-_...)', met: rules.hasSpecial },
+    { label: 'Las contraseñas coinciden exactamente', met: rules.passwordsMatch },
+  ];
+
+  return (
+    <div className="p-3 bg-neutral-50/90 rounded-xl border border-neutral-200/90 space-y-2 text-[11px]">
+      <div className="font-semibold text-neutral-800 flex items-center justify-between">
+        <span className="flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+          <span>Reglas obligatorias de Contraseña Segura:</span>
+        </span>
+        {rules.allValid ? (
+          <span className="text-emerald-700 font-bold flex items-center gap-1 bg-emerald-100/70 px-2 py-0.5 rounded-md text-[10px]">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            ¡Válida y Segura!
+          </span>
+        ) : (
+          <span className="text-amber-700 font-medium text-[10px] bg-amber-100/70 px-2 py-0.5 rounded-md">
+            Cumple todos los puntos
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+        {items.map((item, idx) => (
+          <div
+            key={idx}
+            className={`flex items-center gap-1.5 transition-colors ${
+              item.met ? 'text-emerald-700 font-bold' : 'text-neutral-500 font-medium'
+            }`}
+          >
+            {item.met ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full border border-neutral-300 flex items-center justify-center shrink-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+              </div>
+            )}
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export const StudentRegistrationForm: React.FC<Props> = ({
   sedes,
@@ -46,10 +156,13 @@ export const StudentRegistrationForm: React.FC<Props> = ({
   const [newSedeName, setNewSedeName] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Formulario Mayor de Edad
   const [adultForm, setAdultForm] = useState({
     fullName: '',
+    username: '',
+    email: '',
     birthDate: '',
     whatsapp: '',
     campus: sedes[0] || 'Tlalnepantla',
@@ -62,10 +175,13 @@ export const StudentRegistrationForm: React.FC<Props> = ({
     confirmPassword: '',
   });
   const [showAdultPass, setShowAdultPass] = useState(false);
+  const [copiedAdultPass, setCopiedAdultPass] = useState(false);
 
   // Formulario Tutor (Menores de edad)
   const [tutorForm, setTutorForm] = useState({
     tutorName: '',
+    username: '',
+    email: '',
     whatsapp: '',
     campus: sedes[0] || 'Tlalnepantla',
     emergencyPhone: '',
@@ -73,6 +189,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
     confirmPassword: '',
   });
   const [showTutorPass, setShowTutorPass] = useState(false);
+  const [copiedTutorPass, setCopiedTutorPass] = useState(false);
 
   const [children, setChildren] = useState<MinorChildForm[]>([
     {
@@ -126,7 +243,35 @@ export const StudentRegistrationForm: React.FC<Props> = ({
     });
   };
 
-  const handleSubmitAdult = (e: React.FormEvent) => {
+  // Generar contraseña para Mayor de Edad
+  const handleGenerateAdultPassword = () => {
+    const generated = generateSecurePassword();
+    setAdultForm((prev) => ({ ...prev, password: generated, confirmPassword: generated }));
+    setShowAdultPass(true);
+    setCopiedAdultPass(true);
+    try {
+      navigator.clipboard.writeText(generated);
+    } catch {
+      // Ignorar si clipboard API no está permitido en iframe
+    }
+    setTimeout(() => setCopiedAdultPass(false), 4000);
+  };
+
+  // Generar contraseña para Tutor
+  const handleGenerateTutorPassword = () => {
+    const generated = generateSecurePassword();
+    setTutorForm((prev) => ({ ...prev, password: generated, confirmPassword: generated }));
+    setShowTutorPass(true);
+    setCopiedTutorPass(true);
+    try {
+      navigator.clipboard.writeText(generated);
+    } catch {
+      // Ignorar si clipboard API no está permitido en iframe
+    }
+    setTimeout(() => setCopiedTutorPass(false), 4000);
+  };
+
+  const handleSubmitAdult = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -135,19 +280,37 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       return;
     }
 
-    const cleanPhone = adultForm.whatsapp.trim();
-    const finalPassword =
-      adultForm.password.trim().length >= 4
-        ? adultForm.password.trim()
-        : cleanPhone.replace(/\D/g, '') || 'geckos2026';
-
-    if (adultForm.password && adultForm.confirmPassword && adultForm.password !== adultForm.confirmPassword) {
+    const rules = evaluatePasswordStrength(adultForm.password, adultForm.confirmPassword);
+    if (!rules.startsWithUpper) {
+      setErrorMessage('La contraseña debe iniciar obligatoriamente con una letra Mayúscula (A-Z).');
+      return;
+    }
+    if (!rules.minLength) {
+      setErrorMessage('La contraseña debe contener al menos 8 caracteres de longitud.');
+      return;
+    }
+    if (!rules.hasNumber) {
+      setErrorMessage('La contraseña debe contener al menos un número (0-9).');
+      return;
+    }
+    if (!rules.hasSpecial) {
+      setErrorMessage('La contraseña debe contener al menos un caracter especial (!@#$%&*-_...).');
+      return;
+    }
+    if (!rules.passwordsMatch) {
       setErrorMessage('Las contraseñas no coinciden. Por favor confirma tu contraseña correctamente.');
       return;
     }
 
+    const cleanPhone = adultForm.whatsapp.trim();
+    const finalPassword = adultForm.password.trim();
+    const finalUsername = adultForm.username.trim().toLowerCase() || cleanPhone;
+    const finalEmail = adultForm.email.trim();
+
     const newStudent: Omit<Student, 'id' | 'joinedDate'> = {
       fullName: adultForm.fullName.trim(),
+      username: finalUsername,
+      email: finalEmail,
       birthDate: adultForm.birthDate,
       category: adultForm.category,
       branch: adultForm.branch,
@@ -161,32 +324,45 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       dueDay: 5,
       tutorName: 'Autónomo (Mayor de edad)',
       tutorPhone: cleanPhone,
-      tutorEmail: '',
-      currentBalance: 800,
-      status: 'adeudo',
+      tutorEmail: finalEmail,
+      currentBalance: 0,
+      status: 'al_corriente',
       registrationType: 'adult',
       password: finalPassword,
     };
 
-    onRegisterStudents([newStudent]);
-    setSuccessMessage(`¡Registro exitoso! Bienvenido ${adultForm.fullName} a Gecko´s Veoleibol.`);
-    setAdultForm({
-      fullName: '',
-      birthDate: '',
-      whatsapp: '',
-      campus: sedes[0] || 'Tlalnepantla',
-      allergies: '',
-      chronicCondition: '',
-      emergencyPhone: '',
-      category: 'Sub 23',
-      branch: 'Femenil',
-      password: '',
-      confirmPassword: '',
-    });
-    setTimeout(() => setSuccessMessage(null), 5000);
+    setIsSubmitting(true);
+    try {
+      const res = await onRegisterStudents([newStudent]);
+      if (res && res.error) {
+        setErrorMessage(`Aviso: Alumno registrado localmente, pero Supabase reportó: ${res.error}`);
+      } else {
+        setSuccessMessage(`¡Registro exitoso! Alumno ${adultForm.fullName} guardado en Base de Datos Supabase. Redirigiendo a tu Dashboard...`);
+      }
+      setAdultForm({
+        fullName: '',
+        username: '',
+        email: '',
+        birthDate: '',
+        whatsapp: '',
+        campus: sedes[0] || 'Tlalnepantla',
+        allergies: '',
+        chronicCondition: '',
+        emergencyPhone: '',
+        category: 'Sub 23',
+        branch: 'Femenil',
+        password: '',
+        confirmPassword: '',
+      });
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setErrorMessage(`Error al procesar registro: ${err.message || 'Intenta nuevamente.'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmitTutor = (e: React.FormEvent) => {
+  const handleSubmitTutor = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -195,13 +371,24 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       return;
     }
 
-    const cleanPhone = tutorForm.whatsapp.trim();
-    const finalPassword =
-      tutorForm.password.trim().length >= 4
-        ? tutorForm.password.trim()
-        : cleanPhone.replace(/\D/g, '') || 'geckos2026';
-
-    if (tutorForm.password && tutorForm.confirmPassword && tutorForm.password !== tutorForm.confirmPassword) {
+    const rules = evaluatePasswordStrength(tutorForm.password, tutorForm.confirmPassword);
+    if (!rules.startsWithUpper) {
+      setErrorMessage('La contraseña debe iniciar obligatoriamente con una letra Mayúscula (A-Z).');
+      return;
+    }
+    if (!rules.minLength) {
+      setErrorMessage('La contraseña debe contener al menos 8 caracteres de longitud.');
+      return;
+    }
+    if (!rules.hasNumber) {
+      setErrorMessage('La contraseña debe contener al menos un número (0-9).');
+      return;
+    }
+    if (!rules.hasSpecial) {
+      setErrorMessage('La contraseña debe contener al menos un caracter especial (!@#$%&*-_...).');
+      return;
+    }
+    if (!rules.passwordsMatch) {
       setErrorMessage('Las contraseñas no coinciden. Por favor confirma tu contraseña correctamente.');
       return;
     }
@@ -212,8 +399,15 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       return;
     }
 
+    const cleanPhone = tutorForm.whatsapp.trim();
+    const finalPassword = tutorForm.password.trim();
+    const finalUsername = tutorForm.username.trim().toLowerCase() || cleanPhone;
+    const finalEmail = tutorForm.email.trim();
+
     const studentsToRegister: Omit<Student, 'id' | 'joinedDate'>[] = validChildren.map((ch, idx) => ({
       fullName: ch.fullName.trim(),
+      username: idx === 0 ? finalUsername : `${finalUsername}_${idx + 1}`,
+      email: finalEmail,
       birthDate: ch.birthDate,
       category: ch.category,
       branch: ch.branch,
@@ -227,36 +421,49 @@ export const StudentRegistrationForm: React.FC<Props> = ({
       dueDay: 5,
       tutorName: tutorForm.tutorName.trim(),
       tutorPhone: cleanPhone,
-      tutorEmail: '',
-      currentBalance: 750,
-      status: 'adeudo',
+      tutorEmail: finalEmail,
+      currentBalance: 0,
+      status: 'al_corriente',
       registrationType: 'minor',
       password: finalPassword,
     }));
 
-    onRegisterStudents(studentsToRegister);
-    setSuccessMessage(
-      `¡Registro familiar exitoso! ${studentsToRegister.length} alumno(s) inscritos bajo la tutela de ${tutorForm.tutorName}.`
-    );
-    setTutorForm({
-      tutorName: '',
-      whatsapp: '',
-      campus: sedes[0] || 'Tlalnepantla',
-      emergencyPhone: '',
-      password: '',
-      confirmPassword: '',
-    });
-    setChildren([
-      {
-        fullName: '',
-        birthDate: '',
-        category: 'Juvenil',
-        branch: 'Femenil',
-        allergies: '',
-        chronicCondition: '',
-      },
-    ]);
-    setTimeout(() => setSuccessMessage(null), 5000);
+    setIsSubmitting(true);
+    try {
+      const res = await onRegisterStudents(studentsToRegister);
+      if (res && res.error) {
+        setErrorMessage(`Aviso: Inscripción local lista, pero Supabase reportó: ${res.error}`);
+      } else {
+        setSuccessMessage(
+          `¡Registro familiar exitoso! ${studentsToRegister.length} alumno(s) inscritos y guardados en Supabase bajo la tutela de ${tutorForm.tutorName}. Redirigiendo a tu Dashboard...`
+        );
+      }
+      setTutorForm({
+        tutorName: '',
+        username: '',
+        email: '',
+        whatsapp: '',
+        campus: sedes[0] || 'Tlalnepantla',
+        emergencyPhone: '',
+        password: '',
+        confirmPassword: '',
+      });
+      setChildren([
+        {
+          fullName: '',
+          birthDate: '',
+          category: 'Juvenil',
+          branch: 'Femenil',
+          allergies: '',
+          chronicCondition: '',
+        },
+      ]);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      setErrorMessage(`Error al registrar tutor: ${err.message || 'Intenta nuevamente.'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -368,18 +575,38 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                     />
                   </div>
 
-                  {/* Fecha de nacimiento */}
+                  {/* Nombre de Usuario */}
                   <div>
                     <label className="block font-semibold text-neutral-800 mb-1">
-                      Fecha de Nacimiento *
+                      Nombre de Usuario (Opcional)
                     </label>
                     <input
-                      type="date"
-                      required
-                      value={adultForm.birthDate}
-                      onChange={(e) => setAdultForm({ ...adultForm, birthDate: e.target.value })}
-                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 font-mono text-xs"
+                      type="text"
+                      placeholder="Ej. valeria.sanchez o vale26"
+                      value={adultForm.username}
+                      onChange={(e) => setAdultForm({ ...adultForm, username: e.target.value.toLowerCase().trim() })}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
                     />
+                    <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                      Para iniciar sesión. Si lo omites, podrás entrar con tu WhatsApp.
+                    </span>
+                  </div>
+
+                  {/* Correo Electrónico */}
+                  <div>
+                    <label className="block font-semibold text-neutral-800 mb-1">
+                      Correo Electrónico (Opcional)
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="valeria@gmail.com"
+                      value={adultForm.email}
+                      onChange={(e) => setAdultForm({ ...adultForm, email: e.target.value })}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
+                    />
+                    <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                      También servirá como identificador de inicio de sesión.
+                    </span>
                   </div>
 
                   {/* WhatsApp */}
@@ -397,8 +624,6 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                     />
                   </div>
 
-
-
                   {/* Teléfono de emergencia */}
                   <div>
                     <label className="block font-semibold text-neutral-800 mb-1">
@@ -411,6 +636,38 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                       value={adultForm.emergencyPhone}
                       onChange={(e) => setAdultForm({ ...adultForm, emergencyPhone: e.target.value })}
                       className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
+                    />
+                  </div>
+
+                  {/* Sede / Campus */}
+                  <div>
+                    <label className="block font-semibold text-neutral-800 mb-1">
+                      Sede de Entrenamiento *
+                    </label>
+                    <select
+                      value={adultForm.campus}
+                      onChange={(e) => setAdultForm({ ...adultForm, campus: e.target.value })}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs font-semibold"
+                    >
+                      {sedes.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Fecha de nacimiento */}
+                  <div>
+                    <label className="block font-semibold text-neutral-800 mb-1">
+                      Fecha de Nacimiento *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={adultForm.birthDate}
+                      onChange={(e) => setAdultForm({ ...adultForm, birthDate: e.target.value })}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 font-mono text-xs"
                     />
                   </div>
 
@@ -483,12 +740,39 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                     />
                   </div>
 
-                  {/* Contraseña para ingresar al sistema */}
-                  <div className="sm:col-span-2 p-3.5 bg-neutral-100/70 rounded-xl border border-neutral-200/90 space-y-3">
-                    <div className="flex items-center gap-2 text-neutral-800 font-bold text-xs">
-                      <Lock className="w-4 h-4 text-amber-600" />
-                      <span>Contraseña de Acceso al Sistema *</span>
+                  {/* Contraseña para ingresar al sistema con generador seguro y advertencias */}
+                  <div className="sm:col-span-2 p-4 bg-neutral-100/80 rounded-2xl border border-neutral-200 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-neutral-900 font-bold text-xs">
+                        <Lock className="w-4 h-4 text-amber-600" />
+                        <span>Contraseña de Acceso al Sistema *</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerateAdultPassword}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/35 border border-amber-500/40 text-amber-950 font-bold text-xs transition cursor-pointer shadow-2xs active:scale-95"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                        <span>⚡ Generar Contraseña Segura</span>
+                      </button>
                     </div>
+
+                    {copiedAdultPass && (
+                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-semibold">
+                          ¡Contraseña generada y copiada al portapapeles! Guárdala en un lugar seguro.
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Crea o genera tu contraseña segura:</strong> Debe iniciar con una letra Mayúscula (A-Z), tener al menos 8 caracteres, incluir números (0-9) y un caracter especial (!@#$%...).
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
@@ -498,7 +782,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                           <input
                             type={showAdultPass ? 'text' : 'password'}
                             required
-                            placeholder="Mínimo 4 caracteres"
+                            placeholder="Ej. Gecko2026#"
                             value={adultForm.password}
                             onChange={(e) => setAdultForm({ ...adultForm, password: e.target.value })}
                             className="w-full px-3 py-2 pr-9 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
@@ -526,8 +810,15 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                         />
                       </div>
                     </div>
+
+                    {/* Checklist en tiempo real */}
+                    <PasswordRulesChecklist
+                      password={adultForm.password}
+                      confirmPassword={adultForm.confirmPassword}
+                    />
+
                     <p className="text-[11px] text-neutral-500">
-                      Esta contraseña te servirá para ingresar a tu perfil de alumno, consultar estados de cuenta y registrar pagos.
+                      Con estos datos ingresarás al Dashboard para consultar tu ficha, pagos, asistencias y calendario deportivo.
                     </p>
                   </div>
                 </div>
@@ -535,10 +826,20 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#000000] hover:bg-[#363435] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer shadow-xs"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-[#000000] hover:bg-[#363435] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer shadow-xs disabled:opacity-60"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Completar Inscripción de Alumno Mayor de Edad</span>
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+                        <span>Guardando en Base de Datos Supabase...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                        <span>Completar Inscripción e Ir a mi Dashboard</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -557,7 +858,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
                       <label className="block font-semibold text-neutral-800 mb-1">
-                        Nombre Completo del Tutor *
+                        Nombre Completo del Padre o Tutor *
                       </label>
                       <input
                         type="text"
@@ -567,6 +868,40 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                         onChange={(e) => setTutorForm({ ...tutorForm, tutorName: e.target.value })}
                         className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
                       />
+                    </div>
+
+                    {/* Nombre de usuario del tutor */}
+                    <div>
+                      <label className="block font-semibold text-neutral-800 mb-1">
+                        Nombre de Usuario del Tutor (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. tutor.carlos o morales2026"
+                        value={tutorForm.username}
+                        onChange={(e) => setTutorForm({ ...tutorForm, username: e.target.value.toLowerCase().trim() })}
+                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
+                      />
+                      <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                        Para ingresar. Si lo omites, podrás entrar con tu WhatsApp.
+                      </span>
+                    </div>
+
+                    {/* Correo Electrónico del tutor */}
+                    <div>
+                      <label className="block font-semibold text-neutral-800 mb-1">
+                        Correo Electrónico del Tutor (Opcional)
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="carlos.morales@correo.com"
+                        value={tutorForm.email}
+                        onChange={(e) => setTutorForm({ ...tutorForm, email: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
+                      />
+                      <span className="text-[10px] text-neutral-400 mt-0.5 block">
+                        También sirve como identificador para iniciar sesión.
+                      </span>
                     </div>
 
                     <div>
@@ -598,12 +933,57 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                       />
                     </div>
 
-                    {/* Contraseña para ingresar al sistema */}
-                    <div className="sm:col-span-2 p-3.5 bg-white rounded-xl border border-neutral-200/90 space-y-3">
-                      <div className="flex items-center gap-2 text-neutral-800 font-bold text-xs">
-                        <Lock className="w-4 h-4 text-amber-600" />
-                        <span>Contraseña de Acceso para el Tutor *</span>
+                    {/* Sede del Tutor / Familia */}
+                    <div className="sm:col-span-2">
+                      <label className="block font-semibold text-neutral-800 mb-1">
+                        Sede de Entrenamiento Familiar *
+                      </label>
+                      <select
+                        value={tutorForm.campus}
+                        onChange={(e) => setTutorForm({ ...tutorForm, campus: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs font-semibold"
+                      >
+                        {sedes.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Contraseña para ingresar al sistema con generador y checklist */}
+                    <div className="sm:col-span-2 p-4 bg-white rounded-2xl border border-neutral-200/90 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-neutral-900 font-bold text-xs">
+                          <Lock className="w-4 h-4 text-amber-600" />
+                          <span>Contraseña de Acceso para el Tutor *</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleGenerateTutorPassword}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/35 border border-amber-500/40 text-amber-950 font-bold text-xs transition cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                          <span>⚡ Generar Contraseña Segura</span>
+                        </button>
                       </div>
+
+                      {copiedTutorPass && (
+                        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="font-semibold">
+                            ¡Contraseña generada y copiada al portapapeles! Guárdala en un lugar seguro.
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <strong>Crea o genera tu contraseña segura:</strong> Debe iniciar con una letra Mayúscula (A-Z), tener al menos 8 caracteres, incluir números (0-9) y un caracter especial (!@#$%...).
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[11px] font-semibold text-neutral-700 mb-1">
@@ -613,7 +993,7 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                             <input
                               type={showTutorPass ? 'text' : 'password'}
                               required
-                              placeholder="Mínimo 4 caracteres"
+                              placeholder="Ej. Tutor2026*"
                               value={tutorForm.password}
                               onChange={(e) => setTutorForm({ ...tutorForm, password: e.target.value })}
                               className="w-full px-3 py-2 pr-9 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:border-[#363435] text-neutral-900 text-xs"
@@ -641,8 +1021,15 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                           />
                         </div>
                       </div>
+
+                      {/* Checklist en tiempo real */}
+                      <PasswordRulesChecklist
+                        password={tutorForm.password}
+                        confirmPassword={tutorForm.confirmPassword}
+                      />
+
                       <p className="text-[11px] text-neutral-500">
-                        Con esta contraseña podrás iniciar sesión como Padre / Tutor y consultar las cuentas de tus hijos.
+                        Con esta contraseña podrás iniciar sesión como Padre / Tutor y consultar las cuentas y avances de tus hijos.
                       </p>
                     </div>
                   </div>
@@ -790,10 +1177,20 @@ export const StudentRegistrationForm: React.FC<Props> = ({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#000000] hover:bg-[#363435] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer shadow-xs"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-[#000000] hover:bg-[#363435] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer shadow-xs disabled:opacity-60"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
-                    <span>Inscribir Tutor con {children.length} Alumno(s)</span>
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 text-amber-400 animate-spin" />
+                        <span>Guardando en Base de Datos Supabase...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                        <span>Inscribir Tutor con {children.length} Alumno(s)</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

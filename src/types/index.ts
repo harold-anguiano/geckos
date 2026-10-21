@@ -50,6 +50,8 @@ export interface Student {
   isActive?: boolean; // true = activo, false = inactivo / desactivado
   photoUrl?: string; // Fotografía del alumno
   password?: string; // Contraseña personal elegida en el registro
+  username?: string; // Nombre de usuario elegido en el registro
+  email?: string; // Correo electrónico del atleta
 }
 
 

@@ -158,14 +158,14 @@ export const AccountStatus: React.FC<Props> = ({
             <div>
               <p className="font-bold">
                 {isUpToDate
-                  ? '¡Cuenta sin adeudos pendientes!'
+                  ? '¡Cuenta al corriente sin adeudos!'
                   : hasDebt
                   ? `Tienes una cuota pendiente de $${currentStudent.currentBalance} MXN.`
                   : 'Comprobante en proceso de validación por el Head Coach.'}
               </p>
               <p className="mt-0.5 text-neutral-600">
                 {isUpToDate
-                  ? 'El alumno está autorizado para participar en todas las sesiones y torneos de la liga.'
+                  ? 'Bienvenido a Geckos Voleibol. Tu registro está activo y sin cargos pendientes por el momento.'
                   : hasDebt
                   ? 'Por favor sube tu comprobante de pago bancario para actualizar tu estatus a corriente.'
                   : 'Tu pago fue reportado y está en espera de revisión. Recibirás tu acuse digital en breve.'}
@@ -185,7 +185,7 @@ export const AccountStatus: React.FC<Props> = ({
               <span className="text-xs font-sans text-neutral-500 font-normal">MXN</span>
             </div>
             <p className="text-xs text-neutral-500 mt-1">
-              Ciclo Mensual · Geckos Voleibol
+              {currentStudent.currentBalance === 0 ? 'Sin adeudo pendiente · Cuenta en ceros' : 'Ciclo Mensual · Geckos Voleibol'}
             </p>
           </div>
 

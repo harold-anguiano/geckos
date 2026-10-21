@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS public.system_users (
     password TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    role TEXT NOT NULL DEFAULT 'coach_assistant', -- 'head_coach', 'coach_assistant', 'player'
+    role TEXT NOT NULL DEFAULT 'coach_assistant', -- 'head_coach', 'coach_assistant', 'player', 'parent'
     campus TEXT DEFAULT 'Tlalnepantla',
     assigned_student_id TEXT,
     avatar_url TEXT,
@@ -58,7 +58,11 @@ CREATE TABLE IF NOT EXISTS public.system_users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Asegurar columna avatar_url si la tabla ya existía
+-- Asegurar columnas en system_users si la tabla ya existía previamente
+ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS campus TEXT DEFAULT 'Tlalnepantla';
+ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS assigned_student_id TEXT;
 ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- Asegurar restricción única en username de forma segura
@@ -106,6 +110,9 @@ ON CONFLICT (name) DO NOTHING;
 CREATE TABLE IF NOT EXISTS public.students (
     id TEXT PRIMARY KEY,
     full_name TEXT NOT NULL,
+    username TEXT,
+    email TEXT,
+    password TEXT,
     birth_date DATE,
     category TEXT NOT NULL,
     jersey_number INTEGER DEFAULT 0,
@@ -130,8 +137,11 @@ CREATE TABLE IF NOT EXISTS public.students (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Asegurar columna photo_url si la tabla ya existía
+-- Asegurar columnas si la tabla ya existía
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS email TEXT;
 
 -- Índices para búsquedas de alumnos
 CREATE INDEX IF NOT EXISTS idx_students_campus ON public.students(campus);
